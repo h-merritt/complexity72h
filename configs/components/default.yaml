@@ -1,0 +1,7 @@
+inner:
+  - component_a
+  - component_b
+
+outer:
+  - component_c
+  - component_d
