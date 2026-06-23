@@ -1,7 +1,17 @@
 inner:
-  - component_a
-  - component_b
+  - Positive_Affect
+  - Self_Efficacy
+  - Agrreableness
+  - Openness
+  - Conscientiousness
+  - Neuroticism
+  - Extraversion
 
 outer:
-  - component_c
-  - component_d
+  - Friendship
+  - Loneliness
+  - Perceived_Hostility
+  - Perceived_Rejection
+  - Emotional_Support
+  - Instrumental_Support
+  - Perceived_Stress
