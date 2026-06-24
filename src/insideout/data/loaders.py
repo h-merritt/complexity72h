@@ -153,3 +153,9 @@ def load_fc_data(
         "data": fc_data,
         "subjects": fc_subjects,
     }
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

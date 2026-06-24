@@ -88,3 +88,9 @@ def run_pca(df: pl.DataFrame, is_z_score: bool = True) -> PCAResult:
         explained_variance_ratio=pca.explained_variance_ratio_.tolist(),
         components=pl.DataFrame(pca.components_, schema=df.columns),
     )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

@@ -33,6 +33,8 @@ def main(cfg: DictConfig) -> None:
     out_dir = ROOT_DIR / "results" / "plots" / "pca"
     subject_col = cfg.components.metadata.subject_id_col
     meta_cols = list(cfg.components.metadata.values())
+    inner_color = cfg.components.colors.inner
+    outer_color = cfg.components.colors.outer
 
     df_inner = data["inner"]
     df_outer = data["outer"]
@@ -59,7 +61,15 @@ def main(cfg: DictConfig) -> None:
         plot_scatter(result, label, out_dir)
         for pc in range(1, n_pcs + 1):
             plot_top_loadings(
-                result.loadings, pc, inner_vars, outer_vars, top_n, label, out_dir
+                result.loadings,
+                pc,
+                inner_vars,
+                outer_vars,
+                top_n,
+                label,
+                out_dir,
+                inner_color=inner_color,
+                outer_color=outer_color,
             )
 
 

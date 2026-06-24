@@ -89,6 +89,8 @@ def plot_top_loadings(
     top_n: int,
     title: str,
     out_dir: Path,
+    inner_color: str = "steelblue",
+    outer_color: str = "tomato",
 ) -> None:
     """Horizontal bar chart of the top-N variables for a given PC.
 
@@ -111,10 +113,15 @@ def plot_top_loadings(
         Title label.
     out_dir : Path
         Directory where the figure is saved.
+    inner_color : str, optional
+        Colour for inner-group tick labels (default ``"steelblue"``).
+    outer_color : str, optional
+        Colour for outer-group tick labels (default ``"tomato"``).
 
     Examples
     --------
-    >>> plot_top_loadings(res.loadings, 1, inner, outer, 10, "Combined", out_dir)
+    >>> plot_top_loadings(res.loadings, 1, inner, outer, 10, "Combined", out_dir,
+    ...                   inner_color="#3498db", outer_color="#e67e22")
     """
     col = f"PC{pc}"
     if col not in loadings.columns:
@@ -134,9 +141,9 @@ def plot_top_loadings(
     for label in ax.get_yticklabels():
         t = label.get_text()
         if t in inner_vars:
-            label.set_color("steelblue")
+            label.set_color(inner_color)
         elif t in outer_vars:
-            label.set_color("tomato")
+            label.set_color(outer_color)
 
     save_fig(fig, f"{title.lower()}_pc{pc}_top_loadings", out_dir)
     plt.close(fig)
@@ -147,3 +154,9 @@ def plot_top_loadings(
     print(f"\nComposition of top {top_n} variables in {col} ({title}):")
     for n, v in zip(names, vals):
         print(f"  - {n} ({block(n)}): {v:.2f}")
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

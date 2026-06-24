@@ -1,3 +1,19 @@
+"""Correlation matrix visualisation functions.
+
+Functions
+---------
+plot_correlation_heatmap
+    Clustered Pearson correlation heatmap with dendrogram.
+plot_clustermap
+    Clustered heatmap with colour-coded cluster annotations.
+plot_clustermap_top
+    Clustered heatmap without row reordering.
+plot_combined_heatmap
+    Combined inner + outer correlation heatmap with colour-coded labels.
+plot_pairplot
+    Seaborn pairplot (scatter matrix) for selected variables.
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -19,6 +35,14 @@ def plot_correlation_heatmap(corr: np.ndarray, labels: list[str]) -> plt.Figure:
     Returns
     -------
     plt.Figure
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> corr = np.corrcoef(np.random.randn(50, 4).T)
+    >>> fig = plot_correlation_heatmap(corr, ["x1", "x2", "x3", "x4"])
+    >>> import matplotlib.pyplot as plt
+    >>> plt.close(fig)
     """
     size = max(8, len(labels) * 0.75)
     g = sns.clustermap(
@@ -56,6 +80,14 @@ def plot_clustermap(
     Returns
     -------
     plt.Figure
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> corr = np.corrcoef(np.random.randn(50, 6).T)
+    >>> fig = plot_clustermap(corr, ["x" + str(i) for i in range(6)], n_clusters=2)
+    >>> import matplotlib.pyplot as plt
+    >>> plt.close(fig)
     """
     from scipy.cluster.hierarchy import fcluster, linkage
     from scipy.spatial.distance import squareform
@@ -111,6 +143,14 @@ def plot_clustermap_top(corr: np.ndarray, labels: list[str]) -> plt.Figure:
     Returns
     -------
     plt.Figure
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> corr = np.corrcoef(np.random.randn(50, 4).T)
+    >>> fig = plot_clustermap_top(corr, ["x1", "x2", "x3", "x4"])
+    >>> import matplotlib.pyplot as plt
+    >>> plt.close(fig)
     """
     size = max(8, len(labels) * 0.55)
     g = sns.clustermap(
@@ -158,6 +198,16 @@ def plot_combined_heatmap(
     Returns
     -------
     plt.Figure
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> corr = np.corrcoef(np.random.randn(50, 6).T)
+    >>> inner = ["x1", "x2", "x3"]
+    >>> outer = ["x4", "x5", "x6"]
+    >>> fig = plot_combined_heatmap(corr, inner, outer)
+    >>> import matplotlib.pyplot as plt
+    >>> plt.close(fig)
     """
     labels = inner + outer
     size = max(8, len(labels) * 0.75)
@@ -206,6 +256,14 @@ def plot_pairplot(
     Returns
     -------
     plt.Figure
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> X = np.random.randn(50, 4)
+    >>> fig = plot_pairplot(X, ["x1", "x2", "x3", "x4"])
+    >>> import matplotlib.pyplot as plt
+    >>> plt.close(fig)
     """
     pdf = pd.DataFrame(X, columns=labels)
     if hue is not None and hue_label:
@@ -217,3 +275,9 @@ def plot_pairplot(
     else:
         g.fig.tight_layout()
     return g.fig
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

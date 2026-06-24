@@ -81,3 +81,9 @@ def save_fig(fig: plt.Figure, name: str, plots_dir: str | Path) -> None:
         out = plots_dir / fmt
         out.mkdir(parents=True, exist_ok=True)
         fig.savefig(out / f"{name}.{fmt}", bbox_inches="tight")
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

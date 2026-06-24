@@ -75,3 +75,8 @@ __all__ = [
     "configure_plot_style",
     "save_fig",
 ]
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

@@ -129,6 +129,7 @@ def plot_precision_graph(
     >>> fig = plot_precision_graph(prec, ["x1", "x2", "x3", "x4"], threshold=0.1)
     >>> fig.show()
     """
+
     import igraph as ig
     from matplotlib.lines import Line2D
 
@@ -223,3 +224,9 @@ def plot_precision_graph(
     ax.set_aspect("equal")
     plt.tight_layout()
     return fig
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

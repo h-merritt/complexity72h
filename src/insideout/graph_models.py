@@ -31,6 +31,14 @@ def compute_covariance(X: np.ndarray) -> np.ndarray:
     -------
     np.ndarray of shape (n_features, n_features)
         Sample covariance matrix.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> X = np.random.randn(50, 4)
+    >>> cov = compute_covariance(X)
+    >>> cov.shape
+    (4, 4)
     """
     return np.cov(X.T)
 
@@ -47,6 +55,14 @@ def compute_correlation(X: np.ndarray) -> np.ndarray:
     -------
     np.ndarray of shape (n_features, n_features)
         Pearson correlation matrix with values in [-1, 1].
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> X = np.random.randn(50, 4)
+    >>> corr = compute_correlation(X)
+    >>> corr.shape
+    (4, 4)
     """
     return np.corrcoef(X.T)
 
@@ -63,6 +79,14 @@ def compute_precision(X: np.ndarray) -> np.ndarray:
     -------
     np.ndarray of shape (n_features, n_features)
         Precision matrix (Moore-Penrose pseudo-inverse of the covariance).
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> X = np.random.randn(50, 4)
+    >>> prec = compute_precision(X)
+    >>> prec.shape
+    (4, 4)
     """
     return np.linalg.pinv(np.cov(X.T))
 
@@ -95,6 +119,13 @@ def fit_glasso(
     alpha_used : float
         Regularisation strength actually used (equals *alpha* when provided,
         otherwise the CV-selected value).
+    Examples
+    --------
+    >>> import numpy as np
+    >>> X = np.random.randn(50, 4)
+    >>> prec, alpha = fit_glasso(X, alpha=0.1)
+    >>> prec.shape
+    (4, 4)
     """
     X_scaled = StandardScaler().fit_transform(X)
     model = (
@@ -104,3 +135,9 @@ def fit_glasso(
     )
     model.fit(X_scaled)
     return model.precision_, float(getattr(model, "alpha_", alpha))
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

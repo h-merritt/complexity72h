@@ -1,3 +1,15 @@
+"""Distribution visualisation functions.
+
+Functions
+---------
+plot_distribution
+    Histogram + KDE + boxplot for a single variable.
+plot_group_distributions
+    Horizontal violin + box + strip plot for a set of variables.
+plot_gender_violin
+    Split violin plot comparing a metric across gender groups.
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -19,6 +31,14 @@ def plot_distribution(data: np.ndarray, name: str) -> plt.Figure:
     Returns
     -------
     plt.Figure
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> data = np.random.randn(100)
+    >>> fig = plot_distribution(data, "test")
+    >>> import matplotlib.pyplot as plt
+    >>> plt.close(fig)
     """
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     sns.histplot(data, kde=True, ax=axes[0])
@@ -56,6 +76,14 @@ def plot_group_distributions(
     Returns
     -------
     plt.Figure
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> X = np.random.randn(100, 4)
+    >>> fig = plot_group_distributions(X, ["a", "b", "c", "d"])
+    >>> import matplotlib.pyplot as plt
+    >>> plt.close(fig)
     """
     long = pd.DataFrame(X, columns=labels).melt(var_name="Metric", value_name="Value")
     fig, ax = plt.subplots(figsize=(10, max(4, len(labels) * 1.2)))
@@ -121,6 +149,15 @@ def plot_gender_violin(
     Returns
     -------
     plt.Figure
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> vals = np.random.randn(100)
+    >>> genders = np.array(["F"] * 50 + ["M"] * 50)
+    >>> fig = plot_gender_violin(vals, genders, "score")
+    >>> import matplotlib.pyplot as plt
+    >>> plt.close(fig)
     """
     pdf = pd.DataFrame({metric_name: values, gender_name: genders})
     fig, ax = plt.subplots(figsize=(7, 4))
@@ -138,3 +175,9 @@ def plot_gender_violin(
     ax.legend(loc="upper right")
     plt.tight_layout()
     return fig
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

@@ -20,3 +20,8 @@ decomposition : module
 from . import data, decomposition, graph_models, viz
 
 __all__ = ["data", "decomposition", "graph_models", "viz"]
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
