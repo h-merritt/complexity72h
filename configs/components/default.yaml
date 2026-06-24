@@ -1,7 +1,11 @@
+colors:
+  inner: "#3498db"
+  outer: "#e67e22"
+
 inner:
   - Positive_Affect
   - Self_Efficacy
-  - Agrreableness
+  - Agreeableness
   - Openness
   - Conscientiousness
   - Neuroticism

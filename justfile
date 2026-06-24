@@ -16,3 +16,7 @@ clean: format check
 # Run marimo notebooks
 notebooks:
     uv run marimo edit notebooks/
+
+# Generate EDA social metrics figures to results/plots/eda/{png,pdf}/
+eda-plots:
+    uv run python scripts/eda_social_metrics.py
