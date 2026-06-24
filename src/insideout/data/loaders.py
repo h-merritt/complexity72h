@@ -112,6 +112,7 @@ def load_survey_data(
 
 def load_fc_data(
     fc_filepath: str = "data/hcp100_fc.mat",
+    fc_key: str = "avg",
     fc_ids_filepath: str = "data/hcp100_fc_ids.csv",
 ) -> dict[str, np.ndarray]:
     """Load fMRI functional-connectivity data.
@@ -121,6 +122,9 @@ def load_fc_data(
     fc_filepath : str
         Path to the ``.mat`` file containing the FC tensor
         (default ``"data/hcp100_fc.mat"``).
+    fc_key : str
+        Variable name to extract from the ``.mat`` file
+        (default ``"avg"``).
     fc_ids_filepath : str
         Path to the CSV with subject IDs
         (default ``"data/hcp100_fc_ids.csv"``).
@@ -138,7 +142,7 @@ def load_fc_data(
     (100, 116, 116)
     """
     mat = loadmat(fc_filepath)
-    fc_data = np.ascontiguousarray(mat["avg"])
+    fc_data = np.ascontiguousarray(mat[fc_key])
     logger.info(f"Successfully loaded FC data. Shape: {fc_data.shape}")
 
     fc_ids = pl.read_csv(fc_ids_filepath)
