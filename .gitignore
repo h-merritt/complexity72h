@@ -241,3 +241,4 @@ models/
 *.ckpt
 *.zip
 .DS_Store
+/drafts
