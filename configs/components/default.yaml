@@ -1,17 +1,87 @@
+# configs/components/default.yaml
+metadata:
+  subject_id_col: "Subject"
+
 inner:
-  - Positive_Affect
-  - Self_Efficacy
-  - Agrreableness
-  - Openness
-  - Conscientiousness
-  - Neuroticism
-  - Extraversion
+  - name: "Positive Affect"
+    column: "Positive_Affect"
+  - name: "Self Efficacy"
+    column: "Self_Efficacy"
+  - name: "Agreeableness"
+    column: "Agreeableness"
+  - name: "Openness"
+    column: "Openness"
+  - name: "Conscientiousness"
+    column: "Conscientiousness"
+  - name: "Neuroticism"
+    column: "Neuroticism"
+  - name: "Extraversion"
+    column: "Extraversion"
 
 outer:
-  - Friendship
-  - Loneliness
-  - Perceived_Hostility
-  - Perceived_Rejection
-  - Emotional_Support
-  - Instrumental_Support
-  - Perceived_Stress
+  - name: "Friendship"
+    column: "Friendship"
+  - name: "Loneliness"
+    column: "Loneliness"
+  - name: "Perceived Hostility"
+    column: "Perceived_Hostility"
+  - name: "Perceived Rejection"
+    column: "Perceived_Rejection"
+  - name: "Emotional Support"
+    column: "Emotional_Support"
+  - name: "Instrumental Support"
+    column: "Instrumental_Support"
+  - name: "Perceived Stress"
+    column: "Perceived_Stress"
+
+mental_health:
+  - name: "Life Satisfaction"
+    column: "Life_Satisfaction"
+  - name: "Purpose In Life"
+    column: "Purpose_In_Life"
+
+  # DSM scales
+  - name: "DSM Depression"
+    column: "DSM_Depression"
+  - name: "DSM Anxiety"
+    column: "DSM_Anxiety"
+  - name: "DSM Somatic Problems"
+    column: "DSM_Somatic_Problems"
+  - name: "DSM Avoidant"
+    column: "DSM_Avoidant"
+  - name: "DSM ADHD"
+    column: "DSM_ADHD"
+  - name: "DSM Inattention"
+    column: "DSM_Inattention"
+  - name: "DSM Hyperactivity"
+    column: "DSM_Hyperactivity"
+  - name: "DSM Antisocial"
+    column: "DSM_Antisocial"
+
+  # ASR Syndromes
+  - name: "ASR Anxiety"
+    column: "ASR_Anxiety"
+  - name: "ASR Withdrawn"
+    column: "ASR_Withdrawn"
+  - name: "ASR Somatic Complaints"
+    column: "ASR_Somatic_Complaints"
+  - name: "ASR Thought Problems"
+    column: "ASR_Thought_Problems"
+  - name: "ASR Attention Problems"
+    column: "ASR_Attention_Problems"
+  - name: "ASR Aggression"
+    column: "ASR_Aggression"
+  - name: "ASR Rulebreaking"
+    column: "ASR_Rulebreaking"
+  - name: "ASR Intrusive Thoughts"
+    column: "ASR_Intrusive_Thoughts"
+  - name: "ASR Other Problems"
+    column: "ASR_Other_Problems"
+  
+  # ASR Broad Syndromes
+  - name: "ASR Internalizing Problems"
+    column: "ASR_Internalizing_Problems"
+  - name: "ASR Externalizing Problems"
+    column: "ASR_Externalizing_Problems"
+  - name: "ASR Total Problems"
+    column: "ASR_Total_Problems"
