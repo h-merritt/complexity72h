@@ -24,3 +24,7 @@ eda-plots:
 # Generate PCA figures to results/plots/pca/{png,pdf}/
 pca-plots:
     uv run python scripts/pca.py
+
+# Generate clustering figures to results/plots/clustering/{png,pdf}/
+clustering-plots:
+    uv run python scripts/clustering.py

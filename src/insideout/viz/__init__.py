@@ -55,6 +55,12 @@ from .pca import (
     plot_top_loadings,
     plot_variance,
 )
+from .clustering import (
+    plot_clustering_metrics,
+    plot_cluster_heatmap_avg_std,
+    plot_cluster_distributions,
+    plot_cluster_pca_scatter,
+)
 from .utils import configure_plot_style, save_fig
 
 __all__ = [
@@ -72,6 +78,10 @@ __all__ = [
     "plot_variance",
     "plot_scatter",
     "plot_top_loadings",
+    "plot_clustering_metrics",
+    "plot_cluster_heatmap_avg_std",
+    "plot_cluster_distributions",
+    "plot_cluster_pca_scatter",
     "configure_plot_style",
     "save_fig",
 ]

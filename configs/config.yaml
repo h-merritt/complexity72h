@@ -1,6 +1,7 @@
 defaults:
   - components: default
   - io: default
+  - clustering: default
   - _self_
 
 hydra:
