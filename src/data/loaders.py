@@ -77,12 +77,13 @@ def load_survey_data(
 
 def load_fc_data(
     fc_filepath: str = "data/hcp100_fc.mat",
+    fc_key: str = "fc",
     fc_ids_filepath: str = "data/hcp100_fc_ids.csv",
 ) -> Dict[str, np.ndarray]:
 
     # 1. Load fMRI Tensor
     mat = loadmat(fc_filepath)
-    fc_data = np.ascontiguousarray(mat['avg'])
+    fc_data = np.ascontiguousarray(mat[fc_key])
     logger.info(f"Successfully loaded FC data. Shape: {fc_data.shape}")
 
     # 2. Load fMRI Subject IDs
