@@ -1,0 +1,3 @@
+mh_data: data/hcp_social_mentahealth_data.csv
+plots: results/plots
+eda_plots: results/plots/eda
