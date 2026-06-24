@@ -83,7 +83,24 @@ def load_fc_data(
 
     # 1. Load fMRI Tensor
     mat = loadmat(fc_filepath)
-    fc_data = np.ascontiguousarray(mat[fc_key])
+    raw_mat = mat[fc_key]
+    
+    # Dynamically find the subject axis (the one that is NOT 100)
+    if raw_mat.ndim == 3:
+        # Find which axis has a length different from your ROI count (100)
+        roi_count = 100
+        subject_axis = [i for i, dim in enumerate(raw_mat.shape) if dim != roi_count]
+        
+        # If we found a unique axis that isn't 100, move it to the front
+        if len(subject_axis) == 1:
+            axis_idx = subject_axis[0]
+            if axis_idx != 0:
+                logger.info(f"Moving subject axis from index {axis_idx} to the front...")
+                raw_mat = np.moveaxis(raw_mat, axis_idx, 0)
+        elif all(dim == roi_count for dim in raw_mat.shape):
+            raise ValueError("All dimensions are 100. Cannot determine subject axis.")
+
+    fc_data = np.ascontiguousarray(raw_mat)
     logger.info(f"Successfully loaded FC data. Shape: {fc_data.shape}")
 
     # 2. Load fMRI Subject IDs
