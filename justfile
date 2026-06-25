@@ -28,3 +28,7 @@ pca-plots:
 # Generate clustering figures to results/plots/clustering/{png,pdf}/
 clustering-plots:
     uv run python scripts/clustering.py
+
+# Generate cluster subject correlation matrices (k=2) to results/plots/clustering/subject_corr/
+cluster-subject-corr-plots:
+    uv run python scripts/cluster_subject_corr.py

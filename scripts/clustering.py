@@ -104,8 +104,8 @@ def main(cfg: DictConfig) -> None:
             percentages = counts / len(labels) * 100
             pct_map = {u: p for u, p in zip(unique, percentages)}
 
-            labels_pct = np.array([f"{lb + 1} ({pct_map[lb]:.1f}%)" for lb in labels])
-            cluster_labels = [f"{u + 1} ({pct_map[u]:.1f}%)" for u in unique]
+            labels_pct = np.array([f"{lb + 1} ({pct_map[lb]:.1f}\\%)" for lb in labels])
+            cluster_labels = [f"{u + 1} ({pct_map[u]:.1f}\\%)" for u in unique]
 
             cluster_means = np.zeros((k, X_scaled.shape[1]))
             cluster_stds = np.zeros((k, X_scaled.shape[1]))
@@ -115,7 +115,8 @@ def main(cfg: DictConfig) -> None:
                     cluster_means[cid] = X_scaled[mask].mean(axis=0)
                     cluster_stds[cid] = X_scaled[mask].std(axis=0)
 
-            k_out_dir = out_dir / f"k{k}"
+            k_out_dir = out_dir / f"k{k}" / subset_name.lower()
+            specific_out_dir = k_out_dir / "specific"
 
             plot_cluster_heatmap_avg_std(
                 cluster_means,
@@ -124,7 +125,7 @@ def main(cfg: DictConfig) -> None:
                 cluster_labels,
                 subset_name,
                 k,
-                k_out_dir,
+                specific_out_dir,
                 cmap=heatmap_cmap,
             )
 
@@ -134,7 +135,7 @@ def main(cfg: DictConfig) -> None:
                 metric_names,
                 subset_name,
                 k,
-                k_out_dir,
+                specific_out_dir,
             )
 
             pca = PCA(n_components=2, random_state=seed)
@@ -144,8 +145,57 @@ def main(cfg: DictConfig) -> None:
                 labels_pct,
                 subset_name,
                 k,
-                k_out_dir,
+                specific_out_dir,
             )
+
+            if "mental_health" not in blocks:
+                mh_cols = [e.column for e in cfg.components["mental_health"]]
+                mh_names = [e.name for e in cfg.components["mental_health"]]
+                mh_data = data["mental_health"].select(mh_cols).to_numpy()
+
+                mh_scaler = StandardScaler()
+                mh_scaled = mh_scaler.fit_transform(mh_data)
+
+                mh_cluster_means = np.zeros((k, mh_scaled.shape[1]))
+                mh_cluster_stds = np.zeros((k, mh_scaled.shape[1]))
+                for cid in range(k):
+                    mh_mask = labels == cid
+                    if mh_mask.sum() > 0:
+                        mh_cluster_means[cid] = mh_scaled[mh_mask].mean(axis=0)
+                        mh_cluster_stds[cid] = mh_scaled[mh_mask].std(axis=0)
+
+                mh_pca = PCA(n_components=2, random_state=seed)
+                mh_X_pca = mh_pca.fit_transform(mh_scaled)
+
+                mh_out_dir = k_out_dir / "mh_only"
+
+                plot_cluster_heatmap_avg_std(
+                    mh_cluster_means,
+                    mh_cluster_stds,
+                    mh_names,
+                    cluster_labels,
+                    subset_name,
+                    k,
+                    mh_out_dir,
+                    cmap=heatmap_cmap,
+                )
+
+                plot_cluster_distributions(
+                    mh_scaled,
+                    labels,
+                    mh_names,
+                    subset_name,
+                    k,
+                    mh_out_dir,
+                )
+
+                plot_cluster_pca_scatter(
+                    mh_X_pca,
+                    labels_pct,
+                    subset_name,
+                    k,
+                    mh_out_dir,
+                )
 
             membership = {}
             for cid in range(k):
@@ -157,7 +207,9 @@ def main(cfg: DictConfig) -> None:
                 pl.Series(membership_col, [membership_json] * master_df.height)
             )
 
-        plot_clustering_metrics(metrics, subset_name, out_dir)
+        plot_clustering_metrics(
+            metrics, subset_name, out_dir / "fitness" / subset_name.lower()
+        )
 
     parquet_path = csv_dir / "survey_clustered_all_k.parquet"
     csv_dir.mkdir(parents=True, exist_ok=True)

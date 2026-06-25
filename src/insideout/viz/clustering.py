@@ -39,8 +39,6 @@ def plot_clustering_metrics(
     db = metrics_dict["DB_Index"]
 
     fig, axes = plt.subplots(2, 2, figsize=(18, 11))
-    fig.suptitle(f"{subset_name} Variables: Clustering Evaluation Metrics", fontsize=14)
-
     # Top-left: inertia (elbow), plotted over all k including k=1
     axes[0, 0].plot(k_range, metrics_dict["Inertia"], marker="o", color="tab:red")
     axes[0, 0].set_title("Inertia (WCSS)")
@@ -113,26 +111,35 @@ def plot_cluster_heatmap_avg_std(
         for j in range(cluster_means.shape[1]):
             annot[i, j] = f"{cluster_means[i, j]:.2f}\n±{cluster_stds[i, j]:.2f}"
 
-    fig, ax = plt.subplots(figsize=(max(16, len(metric_names) * 1.0), max(8, k * 1.5)))
+    fig, ax = plt.subplots(figsize=(max(14, len(metric_names) * 1.5), max(8, k * 1.5)))
     sns.heatmap(
         cluster_means,
         annot=annot,
         fmt="",
-        annot_kws={"size": 7},
+        square=True,
+        annot_kws={"size": 16},
         cmap=cmap,
         center=0,
-        cbar_kws={"label": "Mean Z-Score"},
+        cbar=False,
         linewidths=0.5,
         xticklabels=metric_names,
         yticklabels=cluster_labels,
         ax=ax,
     )
-    ax.set_title(f"{subset_name} Clusters (k={k}): Average Z-Scores ± SD")
     ax.set_ylabel("Cluster")
-    ax.set_xlabel("Survey Measure")
     plt.xticks(rotation=45, ha="right")
     plt.yticks(rotation=0)
+
     plt.tight_layout()
+    fig.subplots_adjust(top=0.88)
+    cbar_ax = fig.add_axes([0.15, 0.91, 0.7, 0.03])
+    cbar = fig.colorbar(
+        ax.collections[0], cax=cbar_ax, orientation="horizontal", label="Mean Z-Score"
+    )
+    vlim = max(abs(cluster_means.min()), abs(cluster_means.max()))
+    ticks = np.linspace(-vlim, vlim, 5)
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels([f"{t:.2f}".replace("-", "\\textminus{}") for t in ticks])
     save_fig(fig, f"{subset_name.lower()}_heatmap", out_dir)
     plt.close(fig)
 
@@ -230,10 +237,6 @@ def plot_cluster_distributions(
     for idx in range(n_clusters, len(axes_flat)):
         axes_flat[idx].set_visible(False)
 
-    fig.suptitle(
-        f"{subset_name} Clusters (k={k}): Metric Distributions per Cluster",
-        fontsize=14,
-    )
     plt.tight_layout()
     save_fig(fig, f"{subset_name.lower()}_distributions", out_dir)
     plt.close(fig)
@@ -284,7 +287,71 @@ def plot_cluster_pca_scatter(
         ax=ax,
     )
     ax.set_title(f"{subset_name} Clusters (k={k}) on Principal Components")
-    ax.legend(title="Cluster (%)")
+    ax.legend(title="Cluster (\%)")
     plt.tight_layout()
     save_fig(fig, f"{subset_name.lower()}_pca_scatter", out_dir)
+    plt.close(fig)
+
+
+def plot_cluster_correlation_matrix(
+    X: np.ndarray,
+    labels: np.ndarray,
+    subset_name: str,
+    k: int,
+    out_dir: str,
+    cmap: str = "RdBu",
+) -> None:
+    """Subject-by-subject correlation matrix reordered by cluster assignment.
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (n_subjects, n_features)
+        Standardised data matrix.
+    labels : np.ndarray of shape (n_subjects,)
+        Cluster assignment (integer labels 0 … k-1).
+    subset_name : str
+        Name of the variable subset.
+    k : int
+        Number of clusters.
+    out_dir : str or Path
+        Directory where the figure is saved.
+    cmap : str, optional
+        Seaborn / matplotlib colormap name (default ``"RdBu"``).
+    """
+    corr = np.corrcoef(X)
+
+    sort_idx = np.argsort(labels)
+    corr_sorted = corr[sort_idx][:, sort_idx]
+    labels_sorted = labels[sort_idx]
+
+    boundaries = [0]
+    for cid in range(k):
+        idx = np.where(labels_sorted == cid)[0]
+        if len(idx) > 0:
+            boundaries.append(idx[-1] + 1)
+
+    n = X.shape[0]
+    size = min(14, max(6, n * 0.025))
+    fig, ax = plt.subplots(figsize=(size, size * 0.9))
+
+    sns.heatmap(
+        corr_sorted,
+        ax=ax,
+        cmap=cmap,
+        center=0,
+        vmin=-1,
+        vmax=1,
+        square=True,
+        cbar_kws={"label": "Pearson r"},
+        xticklabels=False,
+        yticklabels=False,
+    )
+
+    for b in boundaries[1:-1]:
+        ax.axhline(b, color="black", linewidth=1.5)
+        ax.axvline(b, color="black", linewidth=1.5)
+
+    ax.set_title(f"{subset_name} Clusters (k={k}): Subject Correlation Matrix")
+    plt.tight_layout()
+    save_fig(fig, f"{subset_name.lower()}_subject_corr", out_dir)
     plt.close(fig)

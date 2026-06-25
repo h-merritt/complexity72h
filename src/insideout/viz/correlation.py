@@ -18,11 +18,15 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 import seaborn as sns
 
 
-def plot_correlation_heatmap(corr: np.ndarray, labels: list[str]) -> plt.Figure:
+def plot_correlation_heatmap(
+    corr: np.ndarray, labels: list[str], title: str | None = None
+) -> plt.Figure:
     """Clustered Pearson correlation heatmap with a top dendrogram.
 
     Parameters
@@ -31,6 +35,9 @@ def plot_correlation_heatmap(corr: np.ndarray, labels: list[str]) -> plt.Figure:
         Pearson correlation matrix.
     labels : list of str
         Variable names corresponding to the rows/columns of *corr*.
+    title : str or None, optional
+        Figure title. If ``None``, defaults to
+        ``"Pearson correlation — {n} variables"`` (default: ``None``).
 
     Returns
     -------
@@ -47,7 +54,7 @@ def plot_correlation_heatmap(corr: np.ndarray, labels: list[str]) -> plt.Figure:
     size = max(8, len(labels) * 0.75)
     g = sns.clustermap(
         corr,
-        cmap="BrBG",
+        cmap="RdBu",
         center=0,
         vmin=-1,
         vmax=1,
@@ -62,7 +69,7 @@ def plot_correlation_heatmap(corr: np.ndarray, labels: list[str]) -> plt.Figure:
     g.ax_heatmap.set_xticklabels(
         g.ax_heatmap.get_xticklabels(), rotation=45, ha="right"
     )
-    g.fig.suptitle(f"Pearson correlation — {len(labels)} variables", y=1.02)
+    g.fig.suptitle(title or f"Pearson correlation — {len(labels)} variables", y=1.02)
     return g.fig
 
 
@@ -222,7 +229,7 @@ def plot_combined_heatmap(
     size = max(8, len(labels) * 0.75)
     g = sns.clustermap(
         corr,
-        cmap="BrBG",
+        cmap="RdBu",
         center=0,
         vmin=-1,
         vmax=1,
@@ -241,8 +248,357 @@ def plot_combined_heatmap(
         lbl.set_ha("right")
     for lbl in g.ax_heatmap.get_yticklabels():
         lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
-    g.fig.suptitle("Inner + Outer Pearson correlation", y=1.02)
+    g.fig.suptitle(r"Inner \& Outer", y=1.02)
     return g.fig
+
+
+def plot_correlation_grid_stacked(
+    corr_combined: np.ndarray,
+    corr_inner: np.ndarray,
+    corr_outer: np.ndarray,
+    inner_names: list[str],
+    outer_names: list[str],
+    inner_color: str = "#3498db",
+    outer_color: str = "#e67e22",
+    show_dendrogram: bool = False,
+) -> plt.Figure:
+    """Combined figure with three correlation matrices in a stacked layout.
+
+    Top row shows inner (left) and outer (right) heatmaps.
+    Bottom row shows the combined inner+outer heatmap.
+
+    Parameters
+    ----------
+    corr_combined : np.ndarray of shape (n_inner + n_outer, n_inner + n_outer)
+        Correlation matrix for the concatenated inner + outer variables.
+    corr_inner : np.ndarray of shape (n_inner, n_inner)
+        Correlation matrix for inner variables.
+    corr_outer : np.ndarray of shape (n_outer, n_outer)
+        Correlation matrix for outer variables.
+    inner_names : list of str
+        Labels for inner variables.
+    outer_names : list of str
+        Labels for outer variables.
+    inner_color : str, optional
+        Tick-label colour for inner variables (default ``"#3498db"``).
+    outer_color : str, optional
+        Tick-label colour for outer variables (default ``"#e67e22"``).
+    show_dendrogram : bool, optional
+        If ``True``, show hierarchical dendrograms above each heatmap
+        (default ``False``).
+
+    Returns
+    -------
+    plt.Figure
+    """
+    from scipy.cluster.hierarchy import dendrogram, linkage
+
+    labels_combined = inner_names + outer_names
+    inner_set = set(inner_names)
+
+    def _reorder(corr, labels):
+        Z = linkage(corr, method="average")
+        leaves = dendrogram(Z, no_plot=True)["leaves"]
+        return corr[leaves][:, leaves], [labels[i] for i in leaves]
+
+    def _heatmap(ax, corr, labels):
+        sns.heatmap(
+            corr,
+            ax=ax,
+            cmap="RdBu",
+            center=0,
+            vmin=-1,
+            vmax=1,
+            square=True,
+            xticklabels=labels,
+            yticklabels=labels,
+            cbar=False,
+            linewidths=0.3,
+        )
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+
+    def _dendro_axis(ax, corr):
+        Z = linkage(corr, method="average")
+        with plt.rc_context({"lines.linewidth": 0.8}):
+            dendrogram(Z, ax=ax, orientation="top", above_threshold_color="black")
+        ax.set_axis_off()
+
+    def _color_labels(ax, labels, inner_set, inner_color, outer_color):
+        for lbl in ax.get_xticklabels():
+            lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
+        for lbl in ax.get_yticklabels():
+            lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
+
+    n_inner, n_outer = len(inner_names), len(outer_names)
+    n_combined = n_inner + n_outer
+
+    cell_size = 0.85
+    cbar_ratio = 0.05
+    fig_w = max(18, n_combined * cell_size * 1.2) * (1 + cbar_ratio)
+    fig_h = max(18, n_combined * cell_size * 1.0)
+
+    fig = plt.figure(figsize=(fig_w, fig_h))
+    gs = gridspec.GridSpec(
+        2, 2, figure=fig, width_ratios=[1, cbar_ratio], height_ratios=[1.25, 3]
+    )
+    gs_top = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[0, 0], wspace=0.01)
+    gs_bottom = gridspec.GridSpecFromSubplotSpec(
+        1, 3, subplot_spec=gs[1, 0], width_ratios=[1, 2, 1]
+    )
+    cbar_ax = fig.add_subplot(gs[:, 1])
+
+    if show_dendrogram:
+        dendro_ratio = 0.12
+        # Combined
+        gs_comb = gridspec.GridSpecFromSubplotSpec(
+            2,
+            1,
+            subplot_spec=gs_bottom[0, 1],
+            height_ratios=[dendro_ratio, 1 - dendro_ratio],
+        )
+        ax_dendro_comb = fig.add_subplot(gs_comb[0])
+        ax_comb = fig.add_subplot(gs_comb[1])
+        c_combined, l_combined = _reorder(corr_combined.copy(), labels_combined.copy())
+        _dendro_axis(ax_dendro_comb, corr_combined)
+        _heatmap(ax_comb, c_combined, l_combined)
+        _color_labels(ax_comb, l_combined, inner_set, inner_color, outer_color)
+        ax_comb.set_title(r"Inner \& Outer", fontsize=30)
+
+        # Inner
+        gs_inner = gridspec.GridSpecFromSubplotSpec(
+            2,
+            1,
+            subplot_spec=gs_top[0, 0],
+            height_ratios=[dendro_ratio, 1 - dendro_ratio],
+        )
+        ax_dendro_inner = fig.add_subplot(gs_inner[0])
+        ax_inner = fig.add_subplot(gs_inner[1])
+        c_inner, l_inner = _reorder(corr_inner.copy(), inner_names.copy())
+        _dendro_axis(ax_dendro_inner, corr_inner)
+        _heatmap(ax_inner, c_inner, l_inner)
+        _color_labels(ax_inner, l_inner, set(l_inner), inner_color, outer_color)
+        ax_inner.set_title("Inner", fontsize=30)
+
+        # Outer
+        gs_outer = gridspec.GridSpecFromSubplotSpec(
+            2,
+            1,
+            subplot_spec=gs_top[0, 1],
+            height_ratios=[dendro_ratio, 1 - dendro_ratio],
+        )
+        ax_dendro_outer = fig.add_subplot(gs_outer[0])
+        ax_outer = fig.add_subplot(gs_outer[1])
+        c_outer, l_outer = _reorder(corr_outer.copy(), outer_names.copy())
+        _dendro_axis(ax_dendro_outer, corr_outer)
+        _heatmap(ax_outer, c_outer, l_outer)
+        _color_labels(ax_outer, l_outer, set(), inner_color, outer_color)
+        ax_outer.set_title("Outer", fontsize=30)
+    else:
+        # Row 0: Inner
+        c_inner, l_inner = _reorder(corr_inner.copy(), inner_names.copy())
+        ax_inner = fig.add_subplot(gs_top[0, 0])
+        _heatmap(ax_inner, c_inner, l_inner)
+        _color_labels(ax_inner, l_inner, set(l_inner), inner_color, outer_color)
+        ax_inner.set_title("Inner", fontsize=30)
+
+        # Row 0: Outer
+        c_outer, l_outer = _reorder(corr_outer.copy(), outer_names.copy())
+        ax_outer = fig.add_subplot(gs_top[0, 1])
+        _heatmap(ax_outer, c_outer, l_outer)
+        _color_labels(ax_outer, l_outer, set(), inner_color, outer_color)
+        ax_outer.set_title("Outer", fontsize=30)
+
+        # Row 1: Combined
+        c_combined, l_combined = _reorder(corr_combined.copy(), labels_combined.copy())
+        ax_comb = fig.add_subplot(gs_bottom[0, 1])
+        _heatmap(ax_comb, c_combined, l_combined)
+        _color_labels(ax_comb, l_combined, inner_set, inner_color, outer_color)
+        ax_comb.set_title(r"Inner \& Outer", fontsize=30)
+
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=Normalize(-1, 1))
+    sm.set_array([])
+    cbar = fig.colorbar(sm, cax=cbar_ax)
+    ticks = np.linspace(-1, 1, 5)
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels([f"{t:.1f}".replace("-", "\\textminus{}") for t in ticks])
+
+    plt.tight_layout()
+    return fig
+
+
+def plot_correlation_grid(
+    corr_combined: np.ndarray,
+    corr_inner: np.ndarray,
+    corr_outer: np.ndarray,
+    inner_names: list[str],
+    outer_names: list[str],
+    inner_color: str = "#3498db",
+    outer_color: str = "#e67e22",
+    show_dendrogram: bool = False,
+) -> plt.Figure:
+    """Combined figure with three correlation matrices in a side layout.
+
+    Left column stacks Inner (top) and Outer (bottom) heatmaps.
+    Right column shows the combined Inner+Outer heatmap with its own colorbar.
+
+    Parameters
+    ----------
+    corr_combined : np.ndarray of shape (n_inner + n_outer, n_inner + n_outer)
+        Correlation matrix for the concatenated inner + outer variables.
+    corr_inner : np.ndarray of shape (n_inner, n_inner)
+        Correlation matrix for inner variables.
+    corr_outer : np.ndarray of shape (n_outer, n_outer)
+        Correlation matrix for outer variables.
+    inner_names : list of str
+        Labels for inner variables.
+    outer_names : list of str
+        Labels for outer variables.
+    inner_color : str, optional
+        Tick-label colour for inner variables (default ``"#3498db"``).
+    outer_color : str, optional
+        Tick-label colour for outer variables (default ``"#e67e22"``).
+    show_dendrogram : bool, optional
+        If ``True``, show hierarchical dendrograms above each heatmap
+        (default ``False``).
+
+    Returns
+    -------
+    plt.Figure
+    """
+    from scipy.cluster.hierarchy import dendrogram, linkage
+
+    labels_combined = inner_names + outer_names
+    inner_set = set(inner_names)
+
+    def _reorder(corr, labels):
+        Z = linkage(corr, method="average")
+        leaves = dendrogram(Z, no_plot=True)["leaves"]
+        return corr[leaves][:, leaves], [labels[i] for i in leaves]
+
+    def _heatmap(ax, corr, labels, cbar=True):
+        sns.heatmap(
+            corr,
+            ax=ax,
+            cmap="RdBu",
+            center=0,
+            vmin=-1,
+            vmax=1,
+            square=True,
+            xticklabels=labels,
+            yticklabels=labels,
+            cbar=cbar,
+            linewidths=0.3,
+        )
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+
+    def _dendro_axis(ax, corr):
+        Z = linkage(corr, method="average")
+        with plt.rc_context({"lines.linewidth": 0.8}):
+            dendrogram(Z, ax=ax, orientation="top", above_threshold_color="black")
+        ax.set_axis_off()
+
+    def _color_labels(ax, labels, inner_set, inner_color, outer_color):
+        for lbl in ax.get_xticklabels():
+            lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
+        for lbl in ax.get_yticklabels():
+            lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
+
+    n_inner, n_outer = len(inner_names), len(outer_names)
+    n_combined = n_inner + n_outer
+
+    cell_size = 0.85
+    fig_w = max(20, n_combined * cell_size * 1.6)
+    fig_h = max(12, max(n_inner, n_outer) * cell_size * 2.2)
+
+    fig = plt.figure(figsize=(fig_w, fig_h))
+    gs = gridspec.GridSpec(
+        2, 2, figure=fig, width_ratios=[1, 2], wspace=0.6, hspace=0.5
+    )
+
+    if show_dendrogram:
+        dendro_ratio = 0.12
+        # Combined (right column, both rows)
+        gs_comb = gridspec.GridSpecFromSubplotSpec(
+            2,
+            1,
+            subplot_spec=gs[:, 1],
+            height_ratios=[dendro_ratio, 1 - dendro_ratio],
+        )
+        ax_dendro_comb = fig.add_subplot(gs_comb[0])
+        ax_comb = fig.add_subplot(gs_comb[1])
+        c_combined, l_combined = _reorder(corr_combined.copy(), labels_combined.copy())
+        _dendro_axis(ax_dendro_comb, corr_combined)
+        _heatmap(ax_comb, c_combined, l_combined, cbar=True)
+        _color_labels(ax_comb, l_combined, inner_set, inner_color, outer_color)
+        ax_comb.set_title(r"Inner \& Outer", fontsize=30)
+        cbar_comb = ax_comb.collections[0].colorbar
+        if cbar_comb:
+            ticks = np.linspace(-1, 1, 5)
+            cbar_comb.set_ticks(ticks)
+            cbar_comb.set_ticklabels(
+                [f"{t:.1f}".replace("-", "\\textminus{}") for t in ticks]
+            )
+
+        # Inner (top-left)
+        gs_inner = gridspec.GridSpecFromSubplotSpec(
+            2,
+            1,
+            subplot_spec=gs[0, 0],
+            height_ratios=[dendro_ratio, 1 - dendro_ratio],
+        )
+        ax_dendro_inner = fig.add_subplot(gs_inner[0])
+        ax_inner = fig.add_subplot(gs_inner[1])
+        c_inner, l_inner = _reorder(corr_inner.copy(), inner_names.copy())
+        _dendro_axis(ax_dendro_inner, corr_inner)
+        _heatmap(ax_inner, c_inner, l_inner, cbar=False)
+        _color_labels(ax_inner, l_inner, set(l_inner), inner_color, outer_color)
+        ax_inner.set_title("Inner", fontsize=30)
+
+        # Outer (bottom-left)
+        gs_outer = gridspec.GridSpecFromSubplotSpec(
+            2,
+            1,
+            subplot_spec=gs[1, 0],
+            height_ratios=[dendro_ratio, 1 - dendro_ratio],
+        )
+        ax_dendro_outer = fig.add_subplot(gs_outer[0])
+        ax_outer = fig.add_subplot(gs_outer[1])
+        c_outer, l_outer = _reorder(corr_outer.copy(), outer_names.copy())
+        _dendro_axis(ax_dendro_outer, corr_outer)
+        _heatmap(ax_outer, c_outer, l_outer, cbar=False)
+        _color_labels(ax_outer, l_outer, set(), inner_color, outer_color)
+        ax_outer.set_title("Outer", fontsize=30)
+    else:
+        # Inner (top-left)
+        c_inner, l_inner = _reorder(corr_inner.copy(), inner_names.copy())
+        ax_inner = fig.add_subplot(gs[0, 0])
+        _heatmap(ax_inner, c_inner, l_inner, cbar=False)
+        _color_labels(ax_inner, l_inner, set(l_inner), inner_color, outer_color)
+        ax_inner.set_title("Inner", fontsize=30)
+
+        # Outer (bottom-left)
+        c_outer, l_outer = _reorder(corr_outer.copy(), outer_names.copy())
+        ax_outer = fig.add_subplot(gs[1, 0])
+        _heatmap(ax_outer, c_outer, l_outer, cbar=False)
+        _color_labels(ax_outer, l_outer, set(), inner_color, outer_color)
+        ax_outer.set_title("Outer", fontsize=30)
+
+        # Combined (right column, both rows)
+        c_combined, l_combined = _reorder(corr_combined.copy(), labels_combined.copy())
+        ax_comb = fig.add_subplot(gs[:, 1])
+        _heatmap(ax_comb, c_combined, l_combined, cbar=True)
+        _color_labels(ax_comb, l_combined, inner_set, inner_color, outer_color)
+        ax_comb.set_title(r"Inner \& Outer", fontsize=30)
+        cbar_comb = ax_comb.collections[0].colorbar
+        if cbar_comb:
+            ticks = np.linspace(-1, 1, 5)
+            cbar_comb.set_ticks(ticks)
+            cbar_comb.set_ticklabels(
+                [f"{t:.1f}".replace("-", "\\textminus{}") for t in ticks]
+            )
+
+    plt.tight_layout()
+    return fig
 
 
 def plot_pairplot(

@@ -37,12 +37,15 @@ from .distributions import (
     plot_distribution,
     plot_gender_violin,
     plot_group_distributions,
+    plot_combined_distributions,
 )
 from .correlation import (
     plot_correlation_heatmap,
     plot_clustermap,
     plot_clustermap_top,
     plot_combined_heatmap,
+    plot_correlation_grid,
+    plot_correlation_grid_stacked,
     plot_pairplot,
 )
 from .precision import (
@@ -60,6 +63,7 @@ from .clustering import (
     plot_cluster_heatmap_avg_std,
     plot_cluster_distributions,
     plot_cluster_pca_scatter,
+    plot_cluster_correlation_matrix,
 )
 from .utils import configure_plot_style, save_fig
 
@@ -67,10 +71,13 @@ __all__ = [
     "plot_distribution",
     "plot_gender_violin",
     "plot_group_distributions",
+    "plot_combined_distributions",
     "plot_correlation_heatmap",
     "plot_clustermap",
     "plot_clustermap_top",
     "plot_combined_heatmap",
+    "plot_correlation_grid",
+    "plot_correlation_grid_stacked",
     "plot_pairplot",
     "plot_covariance_heatmap",
     "plot_precision_heatmap",
@@ -82,6 +89,7 @@ __all__ = [
     "plot_cluster_heatmap_avg_std",
     "plot_cluster_distributions",
     "plot_cluster_pca_scatter",
+    "plot_cluster_correlation_matrix",
     "configure_plot_style",
     "save_fig",
 ]

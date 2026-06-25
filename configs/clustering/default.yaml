@@ -1,7 +1,7 @@
-max_k: 10
+max_k: 3
 n_init: 10
 seed: 42
-heatmap_cmap: "Reds"
+heatmap_cmap: "bwr"
 subsets:
   Inner:
     blocks: [inner]

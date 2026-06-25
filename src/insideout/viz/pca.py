@@ -92,10 +92,11 @@ def plot_top_loadings(
     inner_color: str = "#3498db",
     outer_color: str = "#e67e22",
 ) -> None:
-    """Horizontal bar chart of the top-N variables for a given PC.
+    """Vertical bar chart of the top-N variables for a given PC.
 
-    Variables belonging to the *inner* group are coloured ``#3498db``, those in
-    the *outer* group are coloured ``#e67e22``.
+    Variables belonging to the *inner* group have tick labels coloured
+    ``#3498db``, those in the *outer* group ``#e67e22``. Bars are filled
+    in sandy yellow (``#FFD966``).
 
     Parameters
     ----------
@@ -131,19 +132,21 @@ def plot_top_loadings(
     names = top["variable"].to_list()
     vals = top[col].to_list()
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(x=vals, y=names, color="purple", alpha=0.5, ax=ax)
-    ax.set_title(f"Top {top_n} most relevant variables in {col} ({title})")
-    ax.set_xlabel("Loading")
-    ax.set_ylabel("Variable")
-    ax.grid(axis="x", linestyle="--", alpha=0.7)
+    fig, ax = plt.subplots(figsize=(max(16, top_n), 6))
+    sns.barplot(x=names, y=vals, color="#FFD966", alpha=0.5, ax=ax)
+    ax.set_xlabel("")
+    ax.set_ylabel("Loading")
+    ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
+    sns.despine(top=True, right=True, bottom=True, left=False)
 
-    for label in ax.get_yticklabels():
+    for label in ax.get_xticklabels():
         t = label.get_text()
         if t in inner_vars:
             label.set_color(inner_color)
         elif t in outer_vars:
-            label.set_color(outer_color)  # colour-code by variable group
+            label.set_color(outer_color)
+        label.set_rotation(45)
+        label.set_ha("right")
 
     save_fig(fig, f"{title.lower()}_pc{pc}_top_loadings", out_dir)
     plt.close(fig)

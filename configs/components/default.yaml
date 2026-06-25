@@ -1,7 +1,7 @@
 # configs/components/default.yaml
 colors:
-  inner: "#3498db"
-  outer: "#e67e22"
+  inner: "#AB52C5"
+  outer: "#228B22"
 
 metadata:
   subject_id_col: "Subject"

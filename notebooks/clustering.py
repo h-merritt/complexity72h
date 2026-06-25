@@ -233,7 +233,6 @@ def _(
         _ax.tick_params(axis="both", labelsize=16)
         _ax.set_xticks(_metrics["k"])
         _ax.legend(fontsize=16)
-    plt.suptitle(f"{subset_name} -- Metrics across k", fontsize=24)
     plt.tight_layout()
 
     _buf2 = _BytesIO()
@@ -388,10 +387,6 @@ def _(X_scaled, k, labels, metric_names, np, pd, plt, sns, subset_name):
     for _idx in range(_n_clusters, len(_axes_flat)):
         _axes_flat[_idx].set_visible(False)
 
-    fig_dist.suptitle(
-        f"{subset_name} Clusters (k={k}): Metric Distributions per Cluster",
-        fontsize=14,
-    )
     plt.tight_layout()
     fig_dist
     return
@@ -468,10 +463,6 @@ def _(X_scaled, k, labels, metric_names, mo, pd, plt, sns, subset_name):
     for _mi in range(len(metric_names), len(_axes_met_flat)):
         _axes_met_flat[_mi].set_visible(False)
 
-    fig_met.suptitle(
-        f"{subset_name} (k={k}): Distribution per Metric across Clusters",
-        fontsize=18,
-    )
     plt.tight_layout()
 
     _buf_met = _BytesIOmet()

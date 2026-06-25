@@ -10,9 +10,8 @@ from insideout.data.loaders import load_survey_data
 from insideout.graph_models import compute_correlation
 from insideout.viz import (
     configure_plot_style,
-    plot_combined_heatmap,
-    plot_correlation_heatmap,
-    plot_group_distributions,
+    plot_correlation_grid,
+    plot_combined_distributions,
     save_fig,
 )
 
@@ -36,51 +35,37 @@ def main(cfg: DictConfig) -> None:
     df_inner = data["inner"]
     df_outer = data["outer"]
 
-    # ── Horizontal distribution plots (violin + box + strip) ──────────────────
-    for group_name, cols, names, color in [
-        ("Inner", inner_cols, inner_names, inner_color),
-        ("Outer", outer_cols, outer_names, outer_color),
-    ]:
-        X = (
-            df_inner.select(cols).drop_nulls().to_numpy()
-            if group_name == "Inner"
-            else df_outer.select(cols).drop_nulls().to_numpy()
-        )
-        fig = plot_group_distributions(X, names, color=color, group_name=group_name)
-        save_fig(fig, f"distributions_{group_name.lower()}", out_dir)
-        plt.close(fig)
-        print(f"saved distributions_{group_name.lower()}")
-
-    # ── Correlation clustermaps (no numbers, hierarchical dendrogram) ─────────
-    for label, cols, names in [
-        ("inner", inner_cols, inner_names),
-        ("outer", outer_cols, outer_names),
-    ]:
-        _df = df_inner if label == "inner" else df_outer
-        X = _df.select(cols).drop_nulls().to_numpy()
-        fig = plot_correlation_heatmap(compute_correlation(X), names)
-        save_fig(fig, f"correlation_{label}", out_dir)
-        plt.close(fig)
-        print(f"saved correlation_{label}")
-
-    # ── Combined inner + outer (colour-coded labels) ──────────────────────────
+    # ── Combined distribution plot (all Inner + Outer metrics) ───────────────
     all_cols = inner_cols + outer_cols
     X = (
-        df_inner.join(df_outer, on="Subject", how="outer")
+        df_inner.join(df_outer, on="Subject", how="full")
         .select(all_cols)
         .drop_nulls()
         .to_numpy()
     )
-    fig = plot_combined_heatmap(
+    fig = plot_combined_distributions(
+        X, inner_names, outer_names, inner_color, outer_color
+    )
+    save_fig(fig, "distributions_combined", out_dir)
+    plt.close(fig)
+    print("saved distributions_combined")
+
+    # ── Combined correlation grid (side layout) ──────────────────────────
+    X_inner = df_inner.select(inner_cols).drop_nulls().to_numpy()
+    X_outer = df_outer.select(outer_cols).drop_nulls().to_numpy()
+    fig = plot_correlation_grid(
         compute_correlation(X),
+        compute_correlation(X_inner),
+        compute_correlation(X_outer),
         inner_names,
         outer_names,
         inner_color=inner_color,
         outer_color=outer_color,
+        show_dendrogram=cfg.io.correlation_dendrogram,
     )
-    save_fig(fig, "correlation_combined", out_dir)
+    save_fig(fig, "correlation_grid", out_dir)
     plt.close(fig)
-    print("saved correlation_combined")
+    print("saved correlation_grid")
 
     print(f"\nAll figures written to {out_dir}/{{png,pdf}}/")
 

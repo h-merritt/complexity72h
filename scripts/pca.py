@@ -46,7 +46,7 @@ def main(cfg: DictConfig) -> None:
     )
 
     groups = [
-        (df_combined, "Combined", 10, 6),
+        (df_combined, "Combined", len(inner_vars) + len(outer_vars), 6),
         (df_inner.select(inner_vars), "Inner", len(inner_vars), 2),
         (df_outer.select(outer_vars), "Outer", len(outer_vars), 2),
     ]

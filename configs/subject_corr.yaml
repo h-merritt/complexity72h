@@ -1,0 +1,7 @@
+k: 2
+subsets:
+  - Combined_2
+
+hydra:
+  job:
+    chdir: false

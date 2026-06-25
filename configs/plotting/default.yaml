@@ -20,4 +20,6 @@ lines:
 text:
   usetex: true
   latex:
-    preamble: \usepackage{mathptmx}
+    preamble: |
+      \usepackage{mathptmx}
+      \usepackage{textcomp}

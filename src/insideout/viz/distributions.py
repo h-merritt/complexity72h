@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.cluster.hierarchy import dendrogram, linkage
 
 
 def plot_distribution(data: np.ndarray, name: str) -> plt.Figure:
@@ -124,6 +125,120 @@ def plot_group_distributions(
     if group_name:
         ax.set_title(group_name, fontsize=13, fontweight="bold")
     plt.tight_layout()
+    return fig
+
+
+def plot_combined_distributions(
+    X: np.ndarray,
+    inner_names: list[str],
+    outer_names: list[str],
+    inner_color: str = "#3498db",
+    outer_color: str = "#e67e22",
+) -> plt.Figure:
+    """Vertical violin + box + strip plot for combined Inner + Outer metrics.
+
+    Metrics are ordered by hierarchical clustering of the correlation matrix,
+    first all Inner metrics, then all Outer. X-axis tick labels and plot
+    elements are colour-coded by group (inner / outer).
+
+    Parameters
+    ----------
+    X : np.ndarray of shape (n_samples, n_inner + n_outer)
+        Combined data matrix; first ``n_inner`` columns correspond to
+        *inner_names*, remaining to *outer_names*.
+    inner_names : list of str
+        Variable names for the inner block (order matches first columns of X).
+    outer_names : list of str
+        Variable names for the outer block (order matches last columns of X).
+    inner_color : str, optional
+        Colour for inner-group elements (default ``"#3498db"``).
+    outer_color : str, optional
+        Colour for outer-group elements (default ``"#e67e22"``).
+
+    Returns
+    -------
+    plt.Figure
+    """
+    n_inner = len(inner_names)
+    n_outer = len(outer_names)
+    X_inner = X[:, :n_inner]
+    X_outer = X[:, n_inner:]
+
+    def _dendro_order(cols, name_list):
+        corr = np.corrcoef(cols.T)
+        Z = linkage(corr, method="average")
+        leaves = dendrogram(Z, no_plot=True)["leaves"]
+        return [name_list[i] for i in leaves]
+
+    inner_ordered = _dendro_order(X_inner, inner_names)
+    outer_ordered = _dendro_order(X_outer, outer_names)
+    order = inner_ordered + outer_ordered
+
+    idx_map = {name: i for i, name in enumerate(inner_names)}
+    idx_map.update({name: n_inner + i for i, name in enumerate(outer_names)})
+    reordered_idx = [idx_map[name] for name in order]
+    X_reordered = X[:, reordered_idx]
+
+    group = ["inner"] * n_inner + ["outer"] * n_outer
+    long = pd.DataFrame(X_reordered, columns=order).melt(
+        var_name="Metric", value_name="Value"
+    )
+    long["Group"] = long["Metric"].map(dict(zip(order, group)))
+
+    palette_colors = [inner_color] * n_inner + [outer_color] * n_outer
+
+    fig, ax = plt.subplots(figsize=(max(16, len(order) * 0.9), 8))
+
+    sns.violinplot(
+        data=long,
+        x="Metric",
+        y="Value",
+        order=order,
+        hue="Metric",
+        palette=palette_colors,
+        legend=False,
+        inner=None,
+        alpha=0.45,
+        ax=ax,
+    )
+    sns.boxplot(
+        data=long,
+        x="Metric",
+        y="Value",
+        order=order,
+        hue="Metric",
+        palette=palette_colors,
+        legend=False,
+        width=0.3,
+        fliersize=0,
+        linewidth=1.5,
+        ax=ax,
+    )
+    sns.stripplot(
+        data=long,
+        x="Metric",
+        y="Value",
+        order=order,
+        hue="Metric",
+        palette=palette_colors,
+        legend=False,
+        alpha=0.25,
+        jitter=True,
+        size=2,
+        ax=ax,
+    )
+
+    inner_set = set(inner_names)
+    for lbl in ax.get_xticklabels():
+        lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
+        lbl.set_rotation(45)
+        lbl.set_ha("right")
+
+    ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
+    ax.set_xlabel("")
+    ax.set_ylabel("Z-Score")
+    plt.tight_layout()
+    sns.despine(top=True, right=True, bottom=True, left=False)
     return fig
 
 
