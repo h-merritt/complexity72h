@@ -88,7 +88,7 @@ def compute_precision(X: np.ndarray) -> np.ndarray:
     >>> prec.shape
     (4, 4)
     """
-    return np.linalg.pinv(np.cov(X.T))
+    return np.linalg.pinv(np.cov(X.T))  # pseudo-inverse handles rank-deficient cases
 
 
 def fit_glasso(
@@ -129,9 +129,9 @@ def fit_glasso(
     """
     X_scaled = StandardScaler().fit_transform(X)
     model = (
-        GraphicalLassoCV()
+        GraphicalLassoCV()  # cross-validate to pick best alpha automatically
         if alpha is None
-        else GraphicalLasso(alpha=alpha, max_iter=500)
+        else GraphicalLasso(alpha=alpha, max_iter=500)  # use user-supplied penalty
     )
     model.fit(X_scaled)
     return model.precision_, float(getattr(model, "alpha_", alpha))

@@ -69,7 +69,7 @@ def plot_scatter(res: PCAResult, title: str, out_dir: Path) -> None:
     >>> plot_scatter(res, "Combined", Path("results/plots/pca"))
     """
     if res.scores.shape[1] < 2:
-        return
+        return  # need at least two PCs for a 2-D scatter
     e = res.explained_variance_ratio
     fig, ax = plt.subplots(figsize=(10, 8))
     sns.scatterplot(x="PC1", y="PC2", data=res.scores.to_pandas(), ax=ax)
@@ -89,13 +89,13 @@ def plot_top_loadings(
     top_n: int,
     title: str,
     out_dir: Path,
-    inner_color: str = "steelblue",
-    outer_color: str = "tomato",
+    inner_color: str = "#3498db",
+    outer_color: str = "#e67e22",
 ) -> None:
     """Horizontal bar chart of the top-N variables for a given PC.
 
-    Variables belonging to the *inner* group are coloured steelblue, those in
-    the *outer* group are coloured tomato.
+    Variables belonging to the *inner* group are coloured ``#3498db``, those in
+    the *outer* group are coloured ``#e67e22``.
 
     Parameters
     ----------
@@ -125,7 +125,7 @@ def plot_top_loadings(
     """
     col = f"PC{pc}"
     if col not in loadings.columns:
-        return
+        return  # requested PC not in loadings table
 
     top = loadings.select(["variable", col]).sort(col, descending=True).head(top_n)
     names = top["variable"].to_list()
@@ -143,7 +143,7 @@ def plot_top_loadings(
         if t in inner_vars:
             label.set_color(inner_color)
         elif t in outer_vars:
-            label.set_color(outer_color)
+            label.set_color(outer_color)  # colour-code by variable group
 
     save_fig(fig, f"{title.lower()}_pc{pc}_top_loadings", out_dir)
     plt.close(fig)

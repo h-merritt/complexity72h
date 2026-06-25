@@ -87,7 +87,7 @@ def plot_group_distributions(
     """
     long = pd.DataFrame(X, columns=labels).melt(var_name="Metric", value_name="Value")
     fig, ax = plt.subplots(figsize=(10, max(4, len(labels) * 1.2)))
-    sns.violinplot(
+    sns.violinplot(  # layer 1: kernel-density shape
         data=long,
         x="Value",
         y="Metric",
@@ -97,7 +97,7 @@ def plot_group_distributions(
         inner=None,
         alpha=0.45,
     )
-    sns.boxplot(
+    sns.boxplot(  # layer 2: quartile box (whiskers only, no outliers)
         data=long,
         x="Value",
         y="Metric",
@@ -108,7 +108,7 @@ def plot_group_distributions(
         fliersize=0,
         linewidth=1.5,
     )
-    sns.stripplot(
+    sns.stripplot(  # layer 3: raw jittered points
         data=long,
         x="Value",
         y="Metric",

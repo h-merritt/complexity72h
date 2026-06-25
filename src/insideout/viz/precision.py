@@ -136,7 +136,7 @@ def plot_precision_graph(
     n = len(labels)
     edges, weights, signs = [], [], []
     for i in range(n):
-        for j in range(i + 1, n):
+        for j in range(i + 1, n):  # iterate upper triangle only
             val = precision[i, j]
             if abs(val) > threshold:
                 edges.append((i, j))
@@ -161,7 +161,9 @@ def plot_precision_graph(
         return fig
 
     g = ig.Graph(n=n, edges=edges)
-    coords = np.array(g.layout_kamada_kawai().coords)
+    coords = np.array(
+        g.layout_kamada_kawai().coords
+    )  # force-directed layout for readable node placement
     degrees = np.array(g.degree())
     max_w = max(weights)
     norm_w = [w / max_w for w in weights]

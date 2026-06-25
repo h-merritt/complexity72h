@@ -26,9 +26,11 @@ def _flatten(d: dict[str, Any], parent_key: str = "", sep: str = ".") -> dict[st
     for k, v in d.items():
         new_key = f"{parent_key}{sep}{k}" if parent_key else k
         if isinstance(v, dict):
-            items.extend(_flatten(v, new_key, sep=sep).items())
+            items.extend(
+                _flatten(v, new_key, sep=sep).items()
+            )  # recurse into nested block
         else:
-            items.append((new_key, v))
+            items.append((new_key, v))  # leaf value: emit as rcParams key
     return dict(items)
 
 
@@ -52,7 +54,9 @@ def configure_plot_style(path: str | Path) -> None:
         try:
             plt.rcParams[key] = value
         except Exception:
-            logger.warning(f"Failed to set rcParam '{key}'; skipping.")
+            logger.warning(
+                f"Failed to set rcParam '{key}'; skipping."
+            )  # skip unknown or invalid params gracefully
 
 
 def save_fig(fig: plt.Figure, name: str, plots_dir: str | Path) -> None:

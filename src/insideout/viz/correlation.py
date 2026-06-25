@@ -53,12 +53,15 @@ def plot_correlation_heatmap(corr: np.ndarray, labels: list[str]) -> plt.Figure:
         vmax=1,
         annot=False,
         linewidths=0.3,
-        figsize=(size, size * 0.85),
+        figsize=(size, size),
         xticklabels=labels,
         yticklabels=labels,
         dendrogram_ratio=0.2,
     )
     g.ax_row_dendrogram.set_visible(False)
+    g.ax_heatmap.set_xticklabels(
+        g.ax_heatmap.get_xticklabels(), rotation=45, ha="right"
+    )
     g.fig.suptitle(f"Pearson correlation — {len(labels)} variables", y=1.02)
     return g.fig
 
@@ -93,10 +96,16 @@ def plot_clustermap(
     from scipy.spatial.distance import squareform
     from matplotlib.patches import Patch
 
-    dist = (1 - corr) / 2
+    dist = (
+        1 - corr
+    ) / 2  # convert correlation to distance: d = 1 - r, scaled to [0, 1]
     np.fill_diagonal(dist, 0)
-    Z = linkage(squareform(dist, checks=False), method="average")
-    cluster_labels = fcluster(Z, n_clusters, criterion="maxclust")
+    Z = linkage(
+        squareform(dist, checks=False), method="average"
+    )  # build hierarchical tree
+    cluster_labels = fcluster(
+        Z, n_clusters, criterion="maxclust"
+    )  # cut tree into k flat clusters
 
     palette = sns.color_palette("husl", n_clusters)
     row_colors = [palette[i - 1] for i in cluster_labels]
@@ -219,15 +228,17 @@ def plot_combined_heatmap(
         vmax=1,
         annot=False,
         linewidths=0.3,
-        figsize=(size, size * 0.85),
+        figsize=(size, size),
         xticklabels=labels,
         yticklabels=labels,
         dendrogram_ratio=0.2,
     )
     g.ax_row_dendrogram.set_visible(False)
-    inner_set = set(inner)
+    inner_set = set(inner)  # O(1) membership test
     for lbl in g.ax_heatmap.get_xticklabels():
         lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
+        lbl.set_rotation(45)
+        lbl.set_ha("right")
     for lbl in g.ax_heatmap.get_yticklabels():
         lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
     g.fig.suptitle("Inner + Outer Pearson correlation", y=1.02)

@@ -65,7 +65,7 @@ def load_survey_data(
     logger.info(f"Loading CSV data from: {csv_path}")
     df = pl.read_csv(csv_path, null_values=["NA", ""])
     if "" in df.columns:
-        df = df.drop("")
+        df = df.drop("")  # remove unnamed trailing-column artifacts
 
     subject_colname: str = config["metadata"]["subject_id_col"]
     if subject_colname not in df.columns:
@@ -81,7 +81,9 @@ def load_survey_data(
 
     if drop_na:
         n_before = df.height
-        df = df.drop_nulls(subset=existing_relevant_cols)
+        df = df.drop_nulls(
+            subset=existing_relevant_cols
+        )  # listwise deletion on configured columns only
         n_dropped = n_before - df.height
         logger.info(
             f"Cleaned Data: Dropped {n_dropped} subjects out of {n_before} due to NAs."
@@ -95,8 +97,12 @@ def load_survey_data(
             logger.warning(
                 "None of the configured columns were found in the dataframe."
             )
-            return pl.DataFrame()
-        block = df.select([subject_colname, *existing])
+            return (
+                pl.DataFrame()
+            )  # return empty frame so downstream code does not crash
+        block = df.select(
+            [subject_colname, *existing]
+        )  # keep subject ID as first column
         return block
 
     output: dict[str, pl.DataFrame | np.ndarray] = {"subjects": subject_spine}

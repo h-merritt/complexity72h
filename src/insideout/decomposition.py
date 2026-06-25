@@ -69,18 +69,22 @@ def run_pca(df: pl.DataFrame, is_z_score: bool = True) -> PCAResult:
     [0.99..., 0.00...]
     """
     X = df.to_numpy()
-    X = SimpleImputer(strategy="mean").fit_transform(X)
+    X = SimpleImputer(strategy="mean").fit_transform(
+        X
+    )  # fill missing values with column mean
     if not is_z_score:
         from sklearn.preprocessing import StandardScaler
 
-        X = StandardScaler().fit_transform(X)
+        X = StandardScaler().fit_transform(X)  # standardise to zero-mean unit-variance
 
     pca = PCA(n_components=None).fit(X)
     pc_cols = [f"PC{i + 1}" for i in range(pca.n_components_)]
 
     return PCAResult(
         loadings=(
-            pl.DataFrame(pca.components_.T, schema=pc_cols).with_columns(
+            pl.DataFrame(
+                pca.components_.T, schema=pc_cols
+            ).with_columns(  # components_ are rows; transpose to get variable × PC
                 pl.Series("variable", df.columns)
             )
         ),

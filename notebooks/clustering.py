@@ -397,6 +397,94 @@ def _(X_scaled, k, labels, metric_names, np, pd, plt, sns, subset_name):
     return
 
 
+@app.cell(hide_code=True)
+def _(X_scaled, k, labels, metric_names, mo, pd, plt, sns, subset_name):
+    import base64 as _b64met
+    from io import BytesIO as _BytesIOmet
+
+    _order = [f"Cluster {_ci + 1}" for _ci in range(k)]
+    _df_wide = pd.DataFrame(X_scaled, columns=metric_names)
+    _df_wide["Cluster"] = [f"Cluster {_lb + 1}" for _lb in labels]
+    _df_long = _df_wide.melt(id_vars="Cluster", var_name="Metric", value_name="Value")
+
+    _palette = dict(zip(_order, sns.color_palette("Set2", k)))
+    _ncols_met = 4
+    _nrows_met = -(-len(metric_names) // _ncols_met)
+
+    fig_met, _axes_met = plt.subplots(
+        _nrows_met,
+        _ncols_met,
+        figsize=(9 * _ncols_met, 7 * _nrows_met),
+        squeeze=False,
+    )
+    _axes_met_flat = _axes_met.flatten()
+
+    for _mi, _metric in enumerate(metric_names):
+        _ax = _axes_met_flat[_mi]
+        _df_m = _df_long[_df_long["Metric"] == _metric]
+        sns.violinplot(
+            data=_df_m,
+            x="Cluster",
+            y="Value",
+            hue="Cluster",
+            order=_order,
+            palette=_palette,
+            inner=None,
+            alpha=0.45,
+            ax=_ax,
+            legend=False,
+        )
+        sns.boxplot(
+            data=_df_m,
+            x="Cluster",
+            y="Value",
+            hue="Cluster",
+            order=_order,
+            palette=_palette,
+            width=0.25,
+            fliersize=0,
+            linewidth=1.5,
+            ax=_ax,
+            legend=False,
+        )
+        sns.stripplot(
+            data=_df_m,
+            x="Cluster",
+            y="Value",
+            hue="Cluster",
+            order=_order,
+            palette=_palette,
+            alpha=0.3,
+            jitter=True,
+            size=3,
+            ax=_ax,
+            legend=False,
+        )
+        _ax.set_title(_metric, fontsize=14)
+        _ax.set_xlabel("")
+        _ax.set_ylabel("Z-Score", fontsize=11)
+        _ax.tick_params(axis="x", labelsize=11)
+
+    for _mi in range(len(metric_names), len(_axes_met_flat)):
+        _axes_met_flat[_mi].set_visible(False)
+
+    fig_met.suptitle(
+        f"{subset_name} (k={k}): Distribution per Metric across Clusters",
+        fontsize=18,
+    )
+    plt.tight_layout()
+
+    _buf_met = _BytesIOmet()
+    fig_met.savefig(_buf_met, format="png", bbox_inches="tight", dpi=120)
+    plt.close(fig_met)
+    _buf_met.seek(0)
+    _img64_met = _b64met.b64encode(_buf_met.read()).decode()
+    mo.Html(
+        f'<img src="data:image/png;base64,{_img64_met}" style="max-width:100%;height:auto">'
+    )
+    return
+
+
 @app.cell
 def _(X_pca, k, labels_pct, pd, plt, sns, subset_name):
     _plot_df = pd.DataFrame(
