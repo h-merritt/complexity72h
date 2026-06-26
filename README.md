@@ -1,5 +1,4 @@
-# complexity72h
-for the inner-outer self project at complexity 72h 2026 in london
+# Linking the “inner” and “outer” self to mental health and brain networks
 
 <h5 align="center">
     
