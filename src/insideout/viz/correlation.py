@@ -191,8 +191,10 @@ def plot_combined_heatmap(
     outer: list[str],
     inner_color: str = "#3498db",
     outer_color: str = "#e67e22",
+    row_cluster: bool = True,
+    col_cluster: bool = True,
 ) -> plt.Figure:
-    """Clustered correlation heatmap for combined inner + outer variables.
+    """Correlation heatmap for combined inner + outer variables.
 
     Axis tick labels are colour-coded: *inner_color* for inner metrics and
     *outer_color* for outer metrics.
@@ -210,6 +212,10 @@ def plot_combined_heatmap(
         Tick-label colour for inner variables (default: ``"#3498db"``).
     outer_color : str, optional
         Tick-label colour for outer variables (default: ``"#e67e22"``).
+    row_cluster : bool, optional
+        Reorder rows by hierarchical clustering (default: ``True``).
+    col_cluster : bool, optional
+        Reorder columns by hierarchical clustering (default: ``True``).
 
     Returns
     -------
@@ -227,29 +233,52 @@ def plot_combined_heatmap(
     """
     labels = inner + outer
     size = max(8, len(labels) * 0.75)
-    g = sns.clustermap(
-        corr,
-        cmap="RdBu",
-        center=0,
-        vmin=-1,
-        vmax=1,
-        annot=False,
-        linewidths=0.3,
-        figsize=(size, size),
-        xticklabels=labels,
-        yticklabels=labels,
-        dendrogram_ratio=0.2,
-    )
-    g.ax_row_dendrogram.set_visible(False)
-    inner_set = set(inner)  # O(1) membership test
-    for lbl in g.ax_heatmap.get_xticklabels():
+    inner_set = set(inner)
+    show_dendro = row_cluster or col_cluster
+
+    if show_dendro:
+        g = sns.clustermap(
+            corr,
+            cmap="RdBu",
+            center=0,
+            vmin=-1,
+            vmax=1,
+            annot=False,
+            linewidths=0.3,
+            figsize=(size, size),
+            xticklabels=labels,
+            yticklabels=labels,
+            row_cluster=row_cluster,
+            col_cluster=col_cluster,
+            dendrogram_ratio=0.2,
+        )
+        if row_cluster:
+            g.ax_row_dendrogram.set_visible(False)
+        fig, ax = g.fig, g.ax_heatmap
+    else:
+        fig, ax = plt.subplots(figsize=(size, size))
+        sns.heatmap(
+            corr,
+            ax=ax,
+            cmap="RdBu",
+            center=0,
+            vmin=-1,
+            vmax=1,
+            annot=False,
+            square=True,
+            xticklabels=labels,
+            yticklabels=labels,
+            linewidths=0.3,
+        )
+
+    for lbl in ax.get_xticklabels():
         lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
         lbl.set_rotation(45)
         lbl.set_ha("right")
-    for lbl in g.ax_heatmap.get_yticklabels():
+    for lbl in ax.get_yticklabels():
         lbl.set_color(inner_color if lbl.get_text() in inner_set else outer_color)
-    g.fig.suptitle(r"Inner \& Outer", y=1.02)
-    return g.fig
+    fig.suptitle(r"Inner \& Outer", y=1.02)
+    return fig
 
 
 def plot_correlation_grid_stacked(

@@ -40,25 +40,26 @@ def plot_clustering_metrics(
 
     fig, axes = plt.subplots(2, 2, figsize=(18, 11))
     # Top-left: inertia (elbow), plotted over all k including k=1
-    axes[0, 0].plot(k_range, metrics_dict["Inertia"], marker="o", color="tab:red")
+    axes[0, 0].plot(k_range, metrics_dict["Inertia"], marker="o", color="black")
     axes[0, 0].set_title("Inertia (WCSS)")
     axes[0, 0].set_xticks(k_range)
 
     # Top-right: silhouette score (higher is better, k>=2 only)
-    axes[0, 1].plot(k_valid, sil, marker="s", color="tab:blue")
+    axes[0, 1].plot(k_valid, sil, marker="s", color="black")
     axes[0, 1].set_title("Silhouette Score")
     axes[0, 1].set_xticks(k_valid)
 
     # Bottom-left: Calinski-Harabasz index (higher is better)
-    axes[1, 0].plot(k_valid, ch, marker="^", color="tab:green")
+    axes[1, 0].plot(k_valid, ch, marker="^", color="black")
     axes[1, 0].set_title("Calinski-Harabasz Index")
     axes[1, 0].set_xticks(k_valid)
 
     # Bottom-right: Davies-Bouldin index (lower is better)
-    axes[1, 1].plot(k_valid, db, marker="d", color="tab:purple")
+    axes[1, 1].plot(k_valid, db, marker="d", color="black")
     axes[1, 1].set_title("Davies-Bouldin Index")
     axes[1, 1].set_xticks(k_valid)
 
+    sns.despine()
     plt.tight_layout()
     save_fig(fig, f"{subset_name.lower()}_evaluation_metrics", out_dir)
     plt.close(fig)
@@ -66,25 +67,21 @@ def plot_clustering_metrics(
 
 def plot_cluster_heatmap_avg_std(
     cluster_means: np.ndarray,
-    cluster_stds: np.ndarray,
     metric_names: list[str],
     cluster_labels: list[str],
     subset_name: str,
     k: int,
     out_dir: str,
     cmap: str = "Reds",
+    vmin: float | None = None,
+    vmax: float | None = None,
 ) -> None:
-    """Heatmap of cluster centroids annotated with mean ± standard deviation.
-
-    Each cell displays the mean z-score of a metric within a cluster on the
-    first line and the standard deviation on the second line.
+    """Heatmap of cluster centroids coloured by mean z-score.
 
     Parameters
     ----------
     cluster_means : np.ndarray of shape (k, n_metrics)
         Mean z-score per cluster per metric.
-    cluster_stds : np.ndarray of shape (k, n_metrics)
-        Standard deviation per cluster per metric.
     metric_names : list of str
         Column names for the heatmap x-axis tick labels.
     cluster_labels : list of str
@@ -97,30 +94,28 @@ def plot_cluster_heatmap_avg_std(
         Directory where the figure is saved.
     cmap : str, optional
         Seaborn / matplotlib colormap name (default ``"Reds"``).
+    vmin : float or None, optional
+        Minimum value for the colormap (default ``None`` = data min).
+    vmax : float or None, optional
+        Maximum value for the colormap (default ``None`` = data max).
 
     Examples
     --------
     >>> means = np.array([[0.5, -0.3], [-0.5, 0.3]])
-    >>> stds = np.array([[0.8, 0.9], [0.7, 1.0]])
-    >>> plot_cluster_heatmap_avg_std(means, stds, ["A", "B"],
+    >>> plot_cluster_heatmap_avg_std(means, ["A", "B"],
     ...     ["1 (50%)", "2 (50%)"], "Test", 2, "results/plots/clustering/k2")
     """
-    # Build two-line annotation strings: "0.45\n±0.12" per cell
-    annot = np.empty_like(cluster_means, dtype=object)
-    for i in range(cluster_means.shape[0]):
-        for j in range(cluster_means.shape[1]):
-            annot[i, j] = f"{cluster_means[i, j]:.2f}\n±{cluster_stds[i, j]:.2f}"
-
     fig, ax = plt.subplots(figsize=(max(14, len(metric_names) * 1.5), max(8, k * 1.5)))
     sns.heatmap(
         cluster_means,
-        annot=annot,
-        fmt="",
+        annot=False,
         square=True,
-        annot_kws={"size": 16},
         cmap=cmap,
         center=0,
-        cbar=False,
+        vmin=vmin,
+        vmax=vmax,
+        cbar=True,
+        cbar_kws={"label": "Mean Z-Score"},
         linewidths=0.5,
         xticklabels=metric_names,
         yticklabels=cluster_labels,
@@ -130,16 +125,13 @@ def plot_cluster_heatmap_avg_std(
     plt.xticks(rotation=45, ha="right")
     plt.yticks(rotation=0)
 
+    cbar = ax.collections[0].colorbar
+    if cbar is not None:
+        cbar.ax.yaxis.set_major_formatter(
+            plt.FuncFormatter(lambda x, _: f"{x:.2f}".replace("-", "\\textminus{}"))
+        )
+
     plt.tight_layout()
-    fig.subplots_adjust(top=0.88)
-    cbar_ax = fig.add_axes([0.15, 0.91, 0.7, 0.03])
-    cbar = fig.colorbar(
-        ax.collections[0], cax=cbar_ax, orientation="horizontal", label="Mean Z-Score"
-    )
-    vlim = max(abs(cluster_means.min()), abs(cluster_means.max()))
-    ticks = np.linspace(-vlim, vlim, 5)
-    cbar.set_ticks(ticks)
-    cbar.set_ticklabels([f"{t:.2f}".replace("-", "\\textminus{}") for t in ticks])
     save_fig(fig, f"{subset_name.lower()}_heatmap", out_dir)
     plt.close(fig)
 
@@ -287,7 +279,7 @@ def plot_cluster_pca_scatter(
         ax=ax,
     )
     ax.set_title(f"{subset_name} Clusters (k={k}) on Principal Components")
-    ax.legend(title="Cluster (\%)")
+    ax.legend(title="Cluster (\\%)")
     plt.tight_layout()
     save_fig(fig, f"{subset_name.lower()}_pca_scatter", out_dir)
     plt.close(fig)
@@ -354,4 +346,145 @@ def plot_cluster_correlation_matrix(
     ax.set_title(f"{subset_name} Clusters (k={k}): Subject Correlation Matrix")
     plt.tight_layout()
     save_fig(fig, f"{subset_name.lower()}_subject_corr", out_dir)
+    plt.close(fig)
+
+
+def plot_cluster_means_bars(
+    cluster_means: np.ndarray,
+    cluster_stds: np.ndarray,
+    cluster_sizes: np.ndarray,
+    metric_names: list[str],
+    cluster_labels: list[str],
+    subset_name: str,
+    k: int,
+    out_dir: str,
+) -> None:
+    """Grouped bar plot of cluster means per metric with SE error bars.
+
+    Parameters
+    ----------
+    cluster_means : np.ndarray of shape (k, n_metrics)
+        Mean z-score per cluster per metric.
+    cluster_stds : np.ndarray of shape (k, n_metrics)
+        Standard deviation per cluster per metric.
+    cluster_sizes : np.ndarray of shape (k,)
+        Number of observations in each cluster.
+    metric_names : list of str
+        Names of the metrics (x-axis).
+    cluster_labels : list of str
+        Labels for each cluster (hue).
+    subset_name : str
+        Name of the variable subset.
+    k : int
+        Number of clusters.
+    out_dir : str or Path
+        Directory where the figure is saved.
+
+    Examples
+    --------
+    >>> means = np.array([[0.5, -0.3], [-0.5, 0.3]])
+    >>> stds = np.array([[0.8, 0.9], [0.7, 1.0]])
+    >>> sizes = np.array([50, 50])
+    >>> plot_cluster_means_bars(means, stds, sizes, ["A", "B"],
+    ...     ["1 (50%)", "2 (50%)"], "Test", 2, "results/plots/clustering/k2")
+    """
+    cluster_ses = cluster_stds / np.sqrt(cluster_sizes)[:, np.newaxis]
+
+    df = pd.DataFrame(cluster_means, columns=metric_names)
+    df["Cluster"] = cluster_labels
+    long_df = df.melt(id_vars="Cluster", var_name="Metric", value_name="Mean Z-Score")
+
+    fig, ax = plt.subplots(figsize=(max(14, len(metric_names) * 1.0), 6))
+    sns.barplot(
+        data=long_df,
+        x="Metric",
+        y="Mean Z-Score",
+        hue="Cluster",
+        palette="tab10",
+        legend=False,
+        ax=ax,
+    )
+    bars = ax.patches
+    for i in range(k):
+        cluster_bars = bars[i::k]
+        centers = [b.get_x() + b.get_width() / 2 for b in cluster_bars]
+        heights = [b.get_height() for b in cluster_bars]
+        ax.errorbar(
+            centers,
+            heights,
+            yerr=cluster_ses[i],
+            fmt="none",
+            capsize=3,
+            color="black",
+            linewidth=0.8,
+        )
+    ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
+    ax.set_xlabel("")
+    ax.set_ylabel("Mean Z-Score")
+    ax.set_xticks(ax.get_xticks())
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    sns.despine(top=True, right=True, bottom=True, left=False)
+    plt.tight_layout()
+    save_fig(fig, f"{subset_name.lower()}_means_bars", out_dir)
+    plt.close(fig)
+
+
+def plot_cluster_means_lollipop(
+    cluster_means: np.ndarray,
+    metric_names: list[str],
+    cluster_labels: list[str],
+    subset_name: str,
+    k: int,
+    out_dir: str,
+) -> None:
+    """Grouped lollipop plot of cluster means per metric.
+
+    Parameters
+    ----------
+    cluster_means : np.ndarray of shape (k, n_metrics)
+        Mean z-score per cluster per metric.
+    metric_names : list of str
+        Names of the metrics (x-axis).
+    cluster_labels : list of str
+        Labels for each cluster (colour).
+    subset_name : str
+        Name of the variable subset.
+    k : int
+        Number of clusters.
+    out_dir : str or Path
+        Directory where the figure is saved.
+
+    Examples
+    --------
+    >>> means = np.array([[0.5, -0.3], [-0.5, 0.3]])
+    >>> plot_cluster_means_lollipop(means, ["A", "B"],
+    ...     ["1 (50%)", "2 (50%)"], "Test", 2, "results/plots/clustering/k2")
+    """
+    n_metrics = len(metric_names)
+    palette = sns.color_palette("tab10", k)
+    x = np.arange(n_metrics)
+    offsets = np.linspace(-0.4, 0.4, k)
+
+    fig, ax = plt.subplots(figsize=(max(14, n_metrics * 1.0), 6))
+    for i in range(k):
+        xi = x + offsets[i]
+        ax.vlines(xi, 0, cluster_means[i], color=palette[i], linewidth=1.5)
+        ax.scatter(
+            xi,
+            cluster_means[i],
+            color=palette[i],
+            s=50,
+            zorder=3,
+            label=cluster_labels[i],
+        )
+
+    ax.axhline(0, color="gray", linewidth=0.8, linestyle="--")
+    ax.set_xticks(x)
+    ax.set_xticklabels(metric_names, rotation=45, ha="right")
+    ax.set_xlabel("")
+    ax.set_ylabel("Mean Z-Score")
+    ax.legend(title="Cluster")
+    sns.despine(top=True, right=True, bottom=True, left=False)
+    plt.tight_layout()
+    save_fig(fig, f"{subset_name.lower()}_means_lollipop", out_dir)
     plt.close(fig)

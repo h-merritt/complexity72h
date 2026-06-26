@@ -32,3 +32,8 @@ clustering-plots:
 # Generate cluster subject correlation matrices (k=2) to results/plots/clustering/subject_corr/
 cluster-subject-corr-plots:
     uv run python scripts/cluster_subject_corr.py
+
+# Run statistical tests and plot heatmap of results
+cluster-stats:
+    uv run python scripts/statistical_tests_clusters.py
+    uv run python scripts/plot_cluster_stats_heatmap.py

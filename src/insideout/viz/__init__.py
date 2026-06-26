@@ -64,6 +64,8 @@ from .clustering import (
     plot_cluster_distributions,
     plot_cluster_pca_scatter,
     plot_cluster_correlation_matrix,
+    plot_cluster_means_bars,
+    plot_cluster_means_lollipop,
 )
 from .utils import configure_plot_style, save_fig
 
@@ -90,6 +92,8 @@ __all__ = [
     "plot_cluster_distributions",
     "plot_cluster_pca_scatter",
     "plot_cluster_correlation_matrix",
+    "plot_cluster_means_bars",
+    "plot_cluster_means_lollipop",
     "configure_plot_style",
     "save_fig",
 ]

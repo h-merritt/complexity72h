@@ -10,7 +10,8 @@ from insideout.data.loaders import load_survey_data
 from insideout.graph_models import compute_correlation
 from insideout.viz import (
     configure_plot_style,
-    plot_correlation_grid,
+    plot_correlation_heatmap,
+    plot_combined_heatmap,
     plot_combined_distributions,
     save_fig,
 )
@@ -50,22 +51,66 @@ def main(cfg: DictConfig) -> None:
     plt.close(fig)
     print("saved distributions_combined")
 
-    # ── Combined correlation grid (side layout) ──────────────────────────
+    # ── Individual correlation heatmaps ─────────────────────────────────
     X_inner = df_inner.select(inner_cols).drop_nulls().to_numpy()
     X_outer = df_outer.select(outer_cols).drop_nulls().to_numpy()
-    fig = plot_correlation_grid(
-        compute_correlation(X),
-        compute_correlation(X_inner),
-        compute_correlation(X_outer),
-        inner_names,
-        outer_names,
+
+    fig = plot_correlation_heatmap(
+        compute_correlation(X_inner), inner_names, title="Inner"
+    )
+    save_fig(fig, "correlation_inner", out_dir)
+    plt.close(fig)
+    print("saved correlation_inner")
+
+    fig = plot_correlation_heatmap(
+        compute_correlation(X_outer), outer_names, title="Outer"
+    )
+    save_fig(fig, "correlation_outer", out_dir)
+    plt.close(fig)
+    print("saved correlation_outer")
+
+    inner_order = [
+        "Openness",
+        "Positive Affect",
+        "Self Efficacy",
+        "Agreeableness",
+        "Conscientiousness",
+        "Extraversion",
+        "Neuroticism",
+    ]
+    outer_order = [
+        "Loneliness",
+        "Perceived Hostility",
+        "Perceived Rejection",
+        "Perceived Stress",
+        "Friendship",
+        "Emotional Support",
+        "Instrumental Support",
+    ]
+
+    inner_plot_cols = [inner_cols[inner_names.index(n)] for n in inner_order]
+    outer_plot_cols = [outer_cols[outer_names.index(n)] for n in outer_order]
+    all_ordered_cols = inner_plot_cols + outer_plot_cols
+
+    X_ordered = (
+        df_inner.join(df_outer, on="Subject", how="full")
+        .select(all_ordered_cols)
+        .drop_nulls()
+        .to_numpy()
+    )
+
+    fig = plot_combined_heatmap(
+        compute_correlation(X_ordered),
+        inner_order,
+        outer_order,
         inner_color=inner_color,
         outer_color=outer_color,
-        show_dendrogram=cfg.io.correlation_dendrogram,
+        row_cluster=False,
+        col_cluster=False,
     )
-    save_fig(fig, "correlation_grid", out_dir)
+    save_fig(fig, "correlation_combined2", out_dir)
     plt.close(fig)
-    print("saved correlation_grid")
+    print("saved correlation_combined2")
 
     print(f"\nAll figures written to {out_dir}/{{png,pdf}}/")
 
