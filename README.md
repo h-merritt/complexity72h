@@ -63,23 +63,20 @@ data/hcp_social_mentahealth_data.csv
 
 ### Step-by-step
 
-Each recipe can also be called individually. Recipes that depend on an earlier step declare that dependency explicitly, so running them standalone will automatically trigger the required prerequisite.
+Each recipe can also be called individually; those that depend on `clustering-plots` declare it explicitly and will trigger it automatically if needed.
 
-| Recipe | Script(s) | Inputs | Outputs |
-|---|---|---|---|
-| `just eda-plots` | `scripts/eda_social_metrics.py` | `data/hcp_social_mentahealth_data.csv` | `results/plots/eda/{png,pdf}/` — combined distributions, inner/outer correlation heatmaps |
-| `just pca-plots` | `scripts/pca.py` | `data/hcp_social_mentahealth_data.csv` | `results/plots/pca/{png,pdf}/` — explained variance, scatter plots, top-loading bar charts (inner, outer, combined) |
-| `just clustering-plots` | `scripts/clustering.py` | `data/hcp_social_mentahealth_data.csv` | `results/plots/clustering/k{k}/{subset}/{png,pdf}/` — heatmaps, bar/lollipop means, distribution plots, PCA scatter; `results/plots/clustering/fitness/` — elbow/silhouette/CH/DB metrics; `results/clustering/survey_clustered_all_k.parquet` — cluster membership for all k |
-| `just cluster-subject-corr-plots` | `scripts/cluster_subject_corr.py` | `survey_clustered_all_k.parquet` | `results/plots/clustering/subject_corr/{png,pdf}/` — per-cluster subject correlation matrices |
-| `just cluster-stats` | `scripts/statistical_tests_clusters.py` → `scripts/plot_cluster_stats_heatmap.py` | `survey_clustered_all_k.parquet` | `results/clustering/statistical_tests.{parquet,csv}` — t-test/ANOVA results with Bonferroni correction; `results/plots/clustering/statistical_tests/{png,pdf}/` — significance heatmaps |
-| `just export-membership` | `scripts/export_cluster_membership.py` | `survey_clustered_all_k.parquet` | `results/clustering/membership/membership_{subset}_k{k}.csv` — flat subject-to-cluster assignment per subset and k |
+#### Scripts
 
-### Other recipes
+- `just eda-plots` — distributions and correlation heatmaps for inner/outer variables → `results/plots/eda/`
+- `just pca-plots` — variance, scatter, and loading plots for inner, outer, and combined → `results/plots/pca/`
+- `just clustering-plots` — k-means over all subsets and k values → `results/plots/clustering/`, `results/clustering/survey_clustered_all_k.parquet`
+- `just cluster-subject-corr-plots` — per-cluster subject correlation matrices → `results/plots/clustering/subject_corr/`
+- `just cluster-stats` — t-test/ANOVA with Bonferroni correction and significance heatmaps → `results/clustering/statistical_tests.{parquet,csv}`, `results/plots/clustering/statistical_tests/`
+- `just export-membership` — flat CSVs of subject-to-cluster assignments → `results/clustering/membership/`
 
-| Recipe | Description |
-|---|---|
-| `just setup` | Create `.venv` and install all dependencies via `uv` |
-| `just notebooks` | Open the `notebooks/` directory in marimo |
+#### Notebooks
+
+- `just notebooks` — open the `notebooks/` directory in marimo for interactive exploration
 
 ## Citation
 
