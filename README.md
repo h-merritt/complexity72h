@@ -3,7 +3,7 @@
 <h5 align="center">
     
 [![arXiv](https://img.shields.io/badge/Arxiv-2606.27956-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2606.27956)
-[![License](https://img.shields.io/badge/Code%20License-MIT-yellow)](https://github.com/SPAICOM/REPO-NAME-HERE/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/Code%20License-MIT-yellow)](https://github.com/h-merritt/complexity72h/blob/main/LICENSE)
 
  <br>
 
