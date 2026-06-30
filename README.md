@@ -2,7 +2,7 @@
 
 <h5 align="center">
     
-[![arXiv](https://img.shields.io/badge/Arxiv-ID.HERE-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/CODE.HERE)
+[![arXiv](https://img.shields.io/badge/Arxiv-2606.27956-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2606.27956)
 [![License](https://img.shields.io/badge/Code%20License-MIT-yellow)](https://github.com/SPAICOM/REPO-NAME-HERE/blob/main/LICENSE)
 
  <br>
@@ -82,6 +82,15 @@ Each recipe can also be called individually; those that depend on `clustering-pl
 If you find this code useful for your research, please consider citing the following paper:
 
 ```
+@misc{agostinelli2026linkinginnerouterself,
+      title={Linking the "inner" and "outer" self to mental health and brain networks}, 
+      author={Cosimo Agostinelli and Ivan Casanovas and Lochan Chaudhari and Arda Ergin and Pablo Estévez-Gutiérrez and Akanksha Gupta and Juliane T. Moraes and Mario Edoardo Pandolfo and Carlos Gershenson and Haily Merritt and Andreia Sofia Teixeira},
+      year={2026},
+      eprint={2606.27956},
+      archivePrefix={arXiv},
+      primaryClass={physics.soc-ph},
+      url={https://arxiv.org/abs/2606.27956}, 
+}
 ```
 
 ## Authors
