@@ -41,7 +41,7 @@ This project uses [`uv`](https://github.com/astral-sh/uv) for Python dependency 
 
 Install the required tools:
 
-- [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
+- [`uv`](https://github.com/astral-sh/uv)
 - [`just`](https://github.com/casey/just)
 
 Follow the installation instructions from their official documentation.
@@ -59,7 +59,7 @@ The `setup` recipe will:
 - Create the `.venv` virtual environment (if it does not exist)
 - Install all project dependencies using `uv`
 
-After the command completes, the development environment will be ready to use.
+After the command completes, the development environment will be ready to use. 🚀
 
 ## Data
 
