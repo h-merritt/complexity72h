@@ -6,22 +6,24 @@ app = marimo.App(width="full")
 
 @app.cell
 def _():
-    import marimo as mo
-    import numpy as np
-    import polars as pl
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    import pandas as pd
-    import yaml
     from pathlib import Path
+
+    import marimo as mo
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pandas as pd
+    import polars as pl
+    import seaborn as sns
+    import yaml
     from sklearn.cluster import KMeans
     from sklearn.decomposition import PCA
     from sklearn.metrics import (
-        silhouette_score,
         calinski_harabasz_score,
         davies_bouldin_score,
+        silhouette_score,
     )
     from sklearn.preprocessing import StandardScaler
+
     from insideout.data.loaders import load_survey_data
     from insideout.viz.utils import configure_plot_style
 
@@ -146,8 +148,8 @@ def _(
 
     unique, counts = np.unique(labels, return_counts=True)
     pct_map = {u: p for u, p in zip(unique, counts / len(labels) * 100)}
-    labels_pct = np.array([f"{lb + 1} ({pct_map[lb]:.1f}\%)" for lb in labels])
-    cluster_labels = [f"{u + 1} ({pct_map[u]:.1f}\%)" for u in unique]
+    labels_pct = np.array([rf"{lb + 1} ({pct_map[lb]:.1f}\%)" for lb in labels])
+    cluster_labels = [rf"{u + 1} ({pct_map[u]:.1f}\%)" for u in unique]
 
     cluster_means = np.zeros((k, X_scaled.shape[1]))
     cluster_stds = np.zeros((k, X_scaled.shape[1]))
@@ -243,7 +245,6 @@ def _(
     mo.Html(
         f'<img src="data:image/png;base64,{_img64}" style="max-width:100%;height:auto">'
     )
-    return
 
 
 @app.cell
@@ -268,7 +269,6 @@ def _(ch, db, k, mo, sil, subset_name):
             ),
         ]
     )
-    return
 
 
 @app.cell
@@ -325,7 +325,6 @@ def _(
     mo.Html(
         f'<img src="data:image/png;base64,{_b64}" style="max-width:100%;height:auto">'
     )
-    return
 
 
 @app.cell
@@ -388,8 +387,7 @@ def _(X_scaled, k, labels, metric_names, np, pd, plt, sns, subset_name):
         _axes_flat[_idx].set_visible(False)
 
     plt.tight_layout()
-    fig_dist
-    return
+    fig_dist  # noqa: B018
 
 
 @app.cell(hide_code=True)
@@ -473,7 +471,6 @@ def _(X_scaled, k, labels, metric_names, mo, pd, plt, sns, subset_name):
     mo.Html(
         f'<img src="data:image/png;base64,{_img64_met}" style="max-width:100%;height:auto">'
     )
-    return
 
 
 @app.cell
@@ -492,10 +489,9 @@ def _(X_pca, k, labels_pct, pd, plt, sns, subset_name):
         ax=_ax,
     )
     _ax.set_title(f"{subset_name} Clusters (k={k}) on Principal Components")
-    _ax.legend(title="Cluster (\%)")
+    _ax.legend(title=r"Cluster (\%)")
     plt.tight_layout()
-    fig_pca
-    return
+    fig_pca  # noqa: B018
 
 
 @app.cell(hide_code=True)
@@ -529,7 +525,14 @@ def _(
 ):
     import base64 as _b64jac
     from io import BytesIO as _BytesIO2
+
     import matplotlib.gridspec as _mgs
+
+    # The comparison needs at least two subsets
+    mo.stop(
+        len(clustering_cfg["subsets"]) < 2,
+        mo.md("Jaccard comparison needs at least two clustering subsets."),
+    )
 
     # Cluster assignments for every subset at the selected k
     _subset_labels = {}
@@ -604,7 +607,6 @@ def _(
     mo.Html(
         f'<img src="data:image/png;base64,{_img64_jac}" style="max-width:100%;height:auto">'
     )
-    return
 
 
 if __name__ == "__main__":

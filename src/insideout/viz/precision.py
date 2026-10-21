@@ -12,8 +12,8 @@ plot_precision_graph
 
 from __future__ import annotations
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 
 
@@ -207,7 +207,12 @@ def plot_precision_graph(
             ha="left" if dx >= 0 else "right",
             va="bottom" if dy >= 0 else "top",
             zorder=3,
-            bbox=dict(boxstyle="round,pad=0.15", fc="white", alpha=0.75, ec="none"),
+            bbox={
+                "boxstyle": "round,pad=0.15",
+                "fc": "white",
+                "alpha": 0.75,
+                "ec": "none",
+            },
         )
 
     ax.legend(

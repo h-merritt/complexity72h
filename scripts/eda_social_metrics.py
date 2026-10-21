@@ -1,18 +1,27 @@
+"""Exploratory plots of the inner/outer survey variables.
+
+Draws the distributions of all inner and outer variables and their correlation
+heatmaps (inner, outer and combined, the latter also reordered by group).
+
+Output: ``results/plots/eda/{png,pdf}/``
+"""
+
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 from pathlib import Path
+
 import hydra
+import matplotlib.pyplot as plt
 from omegaconf import DictConfig
 
 from insideout.data.loaders import load_survey_data
 from insideout.graph_models import compute_correlation
 from insideout.viz import (
     configure_plot_style,
-    plot_correlation_heatmap,
-    plot_combined_heatmap,
     plot_combined_distributions,
+    plot_combined_heatmap,
+    plot_correlation_heatmap,
     save_fig,
 )
 
@@ -30,16 +39,21 @@ def main(cfg: DictConfig) -> None:
     outer_cols, outer_names = _cols_and_names(cfg.components.outer)
     inner_color: str = cfg.components.colors.inner
     outer_color: str = cfg.components.colors.outer
-    out_dir: str = cfg.io.eda_plots
+    out_dir: str = str(ROOT_DIR / cfg.io.eda_plots)
 
-    data = load_survey_data(cfg.io.mh_data, "configs/components/default.yaml")
+    subject_col: str = cfg.components.metadata.subject_id_col
+
+    data = load_survey_data(
+        str(ROOT_DIR / cfg.io.mh_data),
+        str(ROOT_DIR / "configs" / "components" / "default.yaml"),
+    )
     df_inner = data["inner"]
     df_outer = data["outer"]
 
     # ── Combined distribution plot (all Inner + Outer metrics) ───────────────
     all_cols = inner_cols + outer_cols
     X = (
-        df_inner.join(df_outer, on="Subject", how="full")
+        df_inner.join(df_outer, on=subject_col, how="full")
         .select(all_cols)
         .drop_nulls()
         .to_numpy()
@@ -93,7 +107,7 @@ def main(cfg: DictConfig) -> None:
     all_ordered_cols = inner_plot_cols + outer_plot_cols
 
     X_ordered = (
-        df_inner.join(df_outer, on="Subject", how="full")
+        df_inner.join(df_outer, on=subject_col, how="full")
         .select(all_ordered_cols)
         .drop_nulls()
         .to_numpy()

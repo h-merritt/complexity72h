@@ -1,7 +1,20 @@
+"""Significance heatmaps of the cluster statistical tests.
+
+Reads ``results/clustering/statistical_tests.parquet`` (written by
+``scripts/statistical_tests_clusters.py``) and draws, for each subset (columns)
+and each k (x axis), the significance level of every tested variable: one pair
+of figures (raw and Bonferroni p-values) for the subset's own variables and one
+pair for the mental-health variables. The subset variables were used to build
+the clusters, so those p-values are circular and mainly descriptive.
+
+Output: ``results/plots/clustering/statistical_tests/{png,pdf}/``
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
 
+import hydra
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,50 +22,17 @@ import polars as pl
 import seaborn as sns
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
+from omegaconf import DictConfig
 
 matplotlib.use("Agg")
 
-ROOT = Path(__file__).resolve().parent.parent
-PARQUET_PATH = ROOT / "results" / "clustering" / "statistical_tests.parquet"
-OUT_DIR = ROOT / "results" / "plots" / "clustering" / "statistical_tests"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-LABEL_MAP = {
-    "Inner": "Inner variables",
-    "Outer": "Outer variables",
-    "Inner & Outer": "Inner + Outer variables",
-}
+ROOT_DIR = Path(__file__).resolve().parents[1]
+PARQUET_PATH = ROOT_DIR / "results" / "clustering" / "statistical_tests.parquet"
+OUT_DIR = ROOT_DIR / "results" / "plots" / "clustering" / "statistical_tests"
 
 CMAP = ListedColormap(["white", "#c7e9c0", "#74c476", "#238b45", "#e0e0e0"])
 PVAL_THRESHOLDS = [0.05, 0.01, 0.001]
 PVAL_LABELS = ["n.s.", "*", "**", "***"]
-
-MH_METRICS = {
-    "Life Satisfaction",
-    "Purpose In Life",
-    "DSM Depression",
-    "DSM Anxiety",
-    "DSM Somatic Problems",
-    "DSM Avoidant",
-    "DSM ADHD",
-    "DSM Inattention",
-    "DSM Hyperactivity",
-    "DSM Antisocial",
-    "ASR Anxiety",
-    "ASR Withdrawn",
-    "ASR Somatic Complaints",
-    "ASR Thought Problems",
-    "ASR Attention Problems",
-    "ASR Aggression",
-    "ASR Rulebreaking",
-    "ASR Intrusive Thoughts",
-    "ASR Other Problems",
-    "ASR Internalizing Problems",
-    "ASR Externalizing Problems",
-    "ASR Total Problems",
-}
-
-SUBSETS = ["Inner", "Outer", "Inner & Outer"]
 
 legend_elements = [
     Patch(facecolor="white", edgecolor="#dddddd", label=r"n.s.  (p $\geq$ 0.05)"),
@@ -63,14 +43,40 @@ legend_elements = [
 ]
 
 
+def _subset_label(subset: str) -> str:
+    """Panel title, e.g. ``"Inner & Outer"`` -> ``"Inner + Outer variables"``."""
+    return f"{subset.replace('&', '+')} variables"
+
+
 def _build_figure(
-    df: pl.DataFrame, title: str, filename: str, pval_col: str = "pval"
+    df: pl.DataFrame,
+    title: str,
+    filename: str,
+    subsets: list[str],
+    pval_col: str = "pval",
 ) -> None:
+    """Draw one significance heatmap per subset and save it as PNG and PDF.
+
+    Parameters
+    ----------
+    df : pl.DataFrame
+        Rows of the statistical-test table to draw (columns ``subset``, ``k``,
+        ``metric`` and ``pval_col``).
+    title : str
+        Figure title.
+    filename : str
+        Output file stem.
+    subsets : list of str
+        Subset display names, one panel each, in plotting order.
+    pval_col : str
+        ``"pval"`` (raw) or ``"pval_bonf"`` (Bonferroni corrected).
+    """
     k_values = sorted(df["k"].unique().to_list())
 
-    fig, axes = plt.subplots(1, 3, figsize=(22, 6.5))
+    fig, axes = plt.subplots(1, len(subsets), figsize=(22, 6.5), squeeze=False)
+    axes = axes[0]
 
-    for idx, subset in enumerate(SUBSETS):
+    for idx, subset in enumerate(subsets):
         sub = df.filter(pl.col("subset") == subset)
         metrics = sorted(sub["metric"].unique().to_list())
         n_metrics = len(metrics)
@@ -113,7 +119,7 @@ def _build_figure(
             xticklabels=[f"k={k}" for k in k_values],
             yticklabels=metrics,
         )
-        ax.set_title(LABEL_MAP[subset], fontsize=14, fontweight="bold")
+        ax.set_title(_subset_label(subset), fontsize=14, fontweight="bold")
 
     for ax in axes:
         ax.tick_params(axis="y", labelsize=8)
@@ -141,32 +147,45 @@ def _build_figure(
     plt.close(fig)
 
 
-df = pl.read_parquet(PARQUET_PATH)
+@hydra.main(config_path="../configs", config_name="config", version_base=None)
+def main(cfg: DictConfig) -> None:
+    mh_metrics = {entry.name for entry in cfg.components.mental_health}
 
-df_subset = df.filter(~pl.col("metric").is_in(MH_METRICS))
-_build_figure(
-    df_subset,
-    "Cluster separation — subset metrics (raw p-values)",
-    "cluster_stats_heatmap",
-    pval_col="pval",
-)
-_build_figure(
-    df_subset,
-    "Cluster separation — subset metrics (Bonferroni corrected)",
-    "cluster_stats_heatmap_bonf",
-    pval_col="pval_bonf",
-)
+    df = pl.read_parquet(PARQUET_PATH)
+    subsets = [s for s in df["subset"].unique(maintain_order=True).to_list()]
 
-df_mh = df.filter(pl.col("metric").is_in(MH_METRICS))
-_build_figure(
-    df_mh,
-    "Cluster separation — MH metrics (raw p-values)",
-    "cluster_stats_heatmap_mh",
-    pval_col="pval",
-)
-_build_figure(
-    df_mh,
-    "Cluster separation — MH metrics (Bonferroni corrected)",
-    "cluster_stats_heatmap_mh_bonf",
-    pval_col="pval_bonf",
-)
+    df_subset = df.filter(~pl.col("metric").is_in(mh_metrics))
+    _build_figure(
+        df_subset,
+        "Cluster separation — subset metrics (raw p-values)",
+        "cluster_stats_heatmap",
+        subsets,
+        pval_col="pval",
+    )
+    _build_figure(
+        df_subset,
+        "Cluster separation — subset metrics (Bonferroni corrected)",
+        "cluster_stats_heatmap_bonf",
+        subsets,
+        pval_col="pval_bonf",
+    )
+
+    df_mh = df.filter(pl.col("metric").is_in(mh_metrics))
+    _build_figure(
+        df_mh,
+        "Cluster separation — MH metrics (raw p-values)",
+        "cluster_stats_heatmap_mh",
+        subsets,
+        pval_col="pval",
+    )
+    _build_figure(
+        df_mh,
+        "Cluster separation — MH metrics (Bonferroni corrected)",
+        "cluster_stats_heatmap_mh_bonf",
+        subsets,
+        pval_col="pval_bonf",
+    )
+
+
+if __name__ == "__main__":
+    main()

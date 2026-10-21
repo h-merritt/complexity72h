@@ -1,5 +1,13 @@
-# -*- coding: utf-8 -*-
-"""PCA Analysis - Repository Executable Script for complexity72h"""
+"""PCA of the inner, outer and combined survey variables.
+
+Fits a PCA on each variable group (``insideout.decomposition.run_pca``, data
+assumed z-scored), prints the explained variance and draws the cumulative
+explained-variance curve, the PC1-PC2 scatter and the loadings of the first PCs
+(the combined set: 6 PCs; inner and outer: 2 PCs each). The "loadings" are
+unit-norm eigenvector weights, not correlations with the PCs.
+
+Output: ``results/plots/pca/{png,pdf}/``
+"""
 
 from __future__ import annotations
 

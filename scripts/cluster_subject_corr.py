@@ -1,3 +1,14 @@
+"""Per-cluster subject correlation matrices.
+
+For the clustering solution selected in ``configs/subject_corr.yaml`` (``k`` and
+``subsets``), draws the subject-by-subject correlation matrix of the z-scored
+survey variables with subjects ordered by cluster, once for the subset's own
+variables and once for the mental-health variables.
+
+Output: ``results/plots/clustering/subject_corr/{subset}/{specific,mh_only}/{png,pdf}/``
+Requires: ``scripts/clustering.py`` has been run.
+"""
+
 import json
 from pathlib import Path
 
@@ -8,7 +19,6 @@ matplotlib.use("Agg")
 
 import numpy as np
 import polars as pl
-import yaml
 from omegaconf import DictConfig
 from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
@@ -36,14 +46,13 @@ def main(cfg: DictConfig) -> None:
     master_df = pl.read_parquet(parquet_path)
 
     data = load_survey_data(
-        csv_path=str(ROOT_DIR / "data" / "hcp_social_mentahealth_data.csv"),
+        csv_path=str(ROOT_DIR / cfg.io.mh_data),
         yaml_config_path=str(ROOT_DIR / "configs" / "components" / "default.yaml"),
         drop_na=True,
     )
     subjects = data["subjects"]
 
-    with open(ROOT_DIR / "configs" / "components" / "default.yaml") as f:
-        components_cfg = yaml.safe_load(f)
+    components_cfg = cfg.components
 
     out_base = ROOT_DIR / "results" / "plots" / "clustering" / "subject_corr"
 
@@ -63,11 +72,11 @@ def main(cfg: DictConfig) -> None:
 
         labels = np.array([subject_to_cluster[s] for s in subjects])
 
-        subset_blocks = _resolve_subset_blocks(subset_name)
+        subset_blocks = list(cfg.clustering.subsets[subset_name].blocks)
 
         dfs = []
         for block in subset_blocks:
-            cols = [e["column"] for e in components_cfg[block]]
+            cols = [e.column for e in components_cfg[block]]
             dfs.append(data[block].select(cols))
         X = pl.concat(dfs, how="horizontal").drop_nulls().to_numpy()
         X_scaled = StandardScaler().fit_transform(X)
@@ -81,7 +90,7 @@ def main(cfg: DictConfig) -> None:
         )
 
         if "mental_health" not in subset_blocks:
-            mh_cols = [e["column"] for e in components_cfg["mental_health"]]
+            mh_cols = [e.column for e in components_cfg.mental_health]
             mh_data = data["mental_health"].select(mh_cols).to_numpy()
             mh_scaled = StandardScaler().fit_transform(mh_data)
 
@@ -94,17 +103,6 @@ def main(cfg: DictConfig) -> None:
             )
 
     print(f"Subject correlation matrices saved to {out_base}/{{png,pdf}}/")
-
-
-def _resolve_subset_blocks(name: str) -> list[str]:
-    mapping = {
-        "Inner": ["inner"],
-        "Outer": ["outer"],
-        "Mental_Health": ["mental_health"],
-        "Combined_2": ["inner", "outer"],
-        "Combined_3": ["inner", "outer", "mental_health"],
-    }
-    return mapping[name]
 
 
 if __name__ == "__main__":

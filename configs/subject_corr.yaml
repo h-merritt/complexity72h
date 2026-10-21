@@ -1,3 +1,11 @@
+defaults:
+  - components: default
+  - io: default
+  - clustering: default
+  - _self_
+
+# Which clustering solution to plot: number of clusters and the subsets
+# (keys of clustering.subsets) to draw.
 k: 2
 subsets:
   - Combined_2

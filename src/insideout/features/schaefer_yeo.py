@@ -7,7 +7,7 @@ Assumes the FC matrices are stored in Schaefer atlas order (parcel 1..n_rois
 along both axes).
 """
 
-from typing import List, Sequence, Tuple, Optional
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -64,9 +64,9 @@ def _parse_network_name(raw, detailed: bool = False) -> str:
 def get_schaefer_networks(
     n_rois: int = 100,
     networks: int = 7,
-    data_dir: Optional[str] = None,
+    data_dir: str | None = None,
     detailed: bool = False,
-) -> List[str]:
+) -> list[str]:
     """Return per-parcel Yeo network names in Schaefer atlas order.
 
     Parameters
@@ -111,7 +111,7 @@ def get_schaefer_networks(
 
 def upper_triangle_tensor(
     fmri_3d: np.ndarray,
-) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+) -> tuple[np.ndarray, tuple[np.ndarray, np.ndarray]]:
     """Vectorise the off-diagonal upper triangle of each (R x R) matrix.
 
     Parameters
@@ -141,7 +141,7 @@ def upper_triangle_tensor(
 
 def system_blocks_from_tensor(
     fmri_3d: np.ndarray, net_labels: Sequence[str]
-) -> Tuple[np.ndarray, List[str]]:
+) -> tuple[np.ndarray, list[str]]:
     """Collapse an FC tensor to within- and between-system block averages.
 
     For each subject, the upper triangle of the FC matrix is partitioned
@@ -159,7 +159,10 @@ def system_blocks_from_tensor(
     Returns
     -------
     block_tensor : np.ndarray of shape (N, n_blocks)
-        Mean connectivity per block for each subject.  Rows correspond to
+        Mean connectivity per block for each subject, with
+        ``n_blocks = n (n + 1) / 2`` for ``n`` distinct networks (``n``
+        within-network blocks plus ``n (n - 1) / 2`` between-network blocks;
+        e.g. 3 networks -> 6 blocks, 7 networks -> 28 blocks).  Columns follow
         the ``block_names`` order (alphabetically sorted).
     block_names : list of str
         Names of each block in ``"NetA-NetB"`` format.
@@ -170,10 +173,12 @@ def system_blocks_from_tensor(
     >>> fc = rng.normal(size=(10, 6, 6))
     >>> lbls = ["Vis", "Vis", "Som", "Som", "Con", "Con"]
     >>> blocks, names = system_blocks_from_tensor(fc, lbls)
-    >>> blocks.shape
-    (10, 3)
+    >>> blocks.shape  # 3 networks -> 3 within + 3 between = 6 blocks
+    (10, 6)
+    >>> names
+    ['Con-Con', 'Con-Som', 'Con-Vis', 'Som-Som', 'Som-Vis', 'Vis-Vis']
     """
-    n, r, _ = fmri_3d.shape
+    r = fmri_3d.shape[1]
     if len(net_labels) != r:
         raise ValueError(f"net_labels length {len(net_labels)} != n_regions {r}.")
 
@@ -208,7 +213,7 @@ def system_blocks_from_tensor(
 
 def system_block_features(
     fc: np.ndarray, net_labels: Sequence[str]
-) -> Tuple[np.ndarray, List[str]]:
+) -> tuple[np.ndarray, list[str]]:
     """Single-matrix convenience wrapper around :func:`system_blocks_from_tensor`.
 
     Parameters
@@ -232,8 +237,8 @@ def system_block_features(
     >>> fc += fc.T  # make symmetric
     >>> lbls = ["Vis", "Vis", "Som", "Som", "Con", "Con"]
     >>> vals, names = system_block_features(fc, lbls)
-    >>> len(vals)
-    3
+    >>> len(vals)  # 3 networks -> 6 blocks
+    6
     """
     vals, names = system_blocks_from_tensor(fc[None, :, :], net_labels)
     return vals[0], names

@@ -25,7 +25,7 @@ DATA_BLOCKS = ("inner", "outer", "mental_health")
 
 
 def load_survey_data(
-    csv_path: str = "data/data_survey.csv",
+    csv_path: str = "data/hcp_social_mentahealth_data.csv",
     yaml_config_path: str = "configs/components/default.yaml",
     drop_na: bool = True,
 ) -> dict[str, pl.DataFrame | np.ndarray]:
@@ -34,7 +34,7 @@ def load_survey_data(
     Parameters
     ----------
     csv_path : str
-        Path to the CSV file (default ``"data/data_survey.csv"``).
+        Path to the CSV file (default ``"data/hcp_social_mentahealth_data.csv"``).
     yaml_config_path : str
         Path to the YAML configuration describing column blocks
         (default ``"configs/components/default.yaml"``).
@@ -52,11 +52,11 @@ def load_survey_data(
 
     Examples
     --------
-    >>> data = load_survey_data("data/data_survey.csv", "configs/components/default.yaml")
-    >>> data["inner"].columns
+    >>> data = load_survey_data("data/hcp_social_mentahealth_data.csv", "configs/components/default.yaml")
+    >>> data["inner"].columns  # doctest: +ELLIPSIS
     ['Subject', 'Positive_Affect', 'Self_Efficacy', ...]
     >>> data["subjects"].shape
-    (100,)
+    (1196,)
     """
     logger.info(f"Loading YAML config from: {yaml_config_path}")
     with open(yaml_config_path) as f:
@@ -145,7 +145,7 @@ def load_fc_data(
     --------
     >>> fc = load_fc_data()
     >>> fc["data"].shape
-    (100, 116, 116)
+    (95, 100, 100)
     """
     mat = loadmat(fc_filepath)
     fc_data = np.ascontiguousarray(mat[fc_key])

@@ -38,14 +38,14 @@ import json
 import logging
 import os
 from itertools import product
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 
-from insideout.data.loaders import load_survey_data, load_fc_data
+from insideout.data.loaders import load_fc_data, load_survey_data
 from insideout.features.schaefer_yeo import get_schaefer_networks
-from .associator import run_behavioral_pls, compare_brain_saliences
+
+from .associator import compare_brain_saliences, run_behavioral_pls
 from .features import build_behavior_block, build_brain_block
 
 logging.basicConfig(level=logging.INFO)
@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 # --------------------------------------------------------------------------- #
 # 3x3 configuration -- edit here to choose what to run.
 # --------------------------------------------------------------------------- #
-BEHAV_SPECS: Dict[str, List[str]] = {
+BEHAV_SPECS: dict[str, list[str]] = {
     "inner": ["inner"],
     "outer": ["outer"],
     "innerouter": ["inner", "outer"],
@@ -65,7 +65,7 @@ BEHAV_SPECS: Dict[str, List[str]] = {
 #   "edges"   ignores net labels.
 #   "systems" collapses FC to within/between-network block means using the
 #             granularity-specific Yeo labels (see get_schaefer_networks).
-BRAIN_SPECS: Dict[str, Dict] = {
+BRAIN_SPECS: dict[str, dict] = {
     "schaefer_edges": {
         "representation": "edges",
         "granularity": None,
@@ -84,7 +84,7 @@ BRAIN_SPECS: Dict[str, Dict] = {
 }
 
 # Full cross product -> 9 runs, named "<behav>__<brain>".
-RUN_CONFIGS: List[Dict] = [
+RUN_CONFIGS: list[dict] = [
     {
         "name": f"{b}__{r}",
         "behav_blocks": BEHAV_SPECS[b],
@@ -123,19 +123,19 @@ RUN_CROSSVAL = True
 TEST_SIZE = 0.25
 N_TEST_SPLIT = 100
 
-PLS_KWARGS = dict(
-    run_permutations=RUN_PERMUTATIONS,
-    nperm=2000,
-    nboot=2000,
-    nsplit=100,
-    rotate_perm=True,
-    seed=0,
+PLS_KWARGS = {
+    "run_permutations": RUN_PERMUTATIONS,
+    "nperm": 2000,
+    "nboot": 2000,
+    "nsplit": 100,
+    "rotate_perm": True,
+    "seed": 0,
     # --- extensions ---
-    svd_method=SVD_METHOD,
-    run_crossval=RUN_CROSSVAL,
-    test_size=TEST_SIZE,
-    n_test_split=N_TEST_SPLIT,
-)
+    "svd_method": SVD_METHOD,
+    "run_crossval": RUN_CROSSVAL,
+    "test_size": TEST_SIZE,
+    "n_test_split": N_TEST_SPLIT,
+}
 
 # Inner-vs-outer brain-salience dissociation, computed within each brain repr
 # (compare_brain_saliences requires identical feature ordering, which is the
@@ -167,7 +167,23 @@ def _jsonable(x):
 
 
 def _save_run(name, cfg, results, brain_meta, behav_cols, out_dir):
-    """Persist *everything* produced for one run and return its per-LV summary rows."""
+    """Persist *everything* produced for one run and return its per-LV summary rows.
+
+    Parameters
+    ----------
+    name : run name (``<behav>__<brain>``); output goes to ``<out_dir>/<name>/``.
+    cfg : the RUN_CONFIGS entry (behavior blocks, brain key, ...).
+    results : dict returned by ``run_behavioral_pls``.
+    brain_meta : metadata from ``build_brain_block`` (type, feature names, ...).
+    behav_cols : names of the behavior columns, in V row order.
+    out_dir : root output directory.
+
+    Returns
+    -------
+    list of dict
+        One summary row per LV (covariance explained, p-value, split-half
+        reliabilities, ...), also used for ``grid_summary.csv``.
+    """
     run_dir = os.path.join(out_dir, name)
     os.makedirs(run_dir, exist_ok=True)
 
@@ -369,7 +385,7 @@ def main():
     need_systems = any(
         BRAIN_SPECS[c["brain_key"]]["representation"] == "systems" for c in RUN_CONFIGS
     )
-    net_labels: Dict[str, list] = {}
+    net_labels: dict[str, list] = {}
     if need_systems:
         net_labels["coarse"] = get_schaefer_networks(
             n_rois=YEO_N_ROIS, networks=YEO_NETWORKS, detailed=False
@@ -393,7 +409,7 @@ def main():
     # edges figure can reorder the 100x100 salience matrix by network).
     shared_meta = {
         "matched_subjects": np.asarray(matched_subjects).tolist(),
-        "n_subjects": int(len(matched_subjects)),
+        "n_subjects": len(matched_subjects),
         "n_rois": int(fmri_matched.shape[1]),
         "yeo_networks": YEO_NETWORKS,
         "behav_specs": BEHAV_SPECS,

@@ -6,6 +6,19 @@ setup:
 notebooks:
     uv run marimo edit notebooks/
 
+# ── Code quality ─────────────────────────────────────────────────────────────
+
+# Run static analysis and automatically fix issues where possible
+check:
+    uvx ruff check . --fix
+
+# Format code according to project style
+format:
+    uvx ruff format .
+
+# Run formatting and linting (CI-style target)
+clean: format check
+
 # ── Analysis Pipeline ────────────────────────────────────────────────────────
 
 # EDA: distribution plots and correlation heatmaps for inner/outer variables
@@ -45,3 +58,24 @@ export-membership: clustering-plots
 
 # Run the complete analysis pipeline end-to-end
 analysis: eda-plots pca-plots cluster-subject-corr-plots cluster-stats export-membership
+
+# ── Brain–behaviour PLS ──────────────────────────────────────────────────────
+
+# Behavioural PLS: {inner, outer, inner+outer} x {Schaefer edges, Yeo sub-blocks, Yeo-7 blocks}
+# Output: results/pls/<run>/ (+ grid_summary.csv, dissociation.json)
+# Requires: data/hcp100_fc.mat (95 subjects x 100 x 100), data/hcp100_fc_ids.csv;
+#           nilearn downloads the Schaefer atlas on first use (network access)
+pls:
+    uv run python -m insideout.analysis.pls
+
+# PLS figures (loadings, scores, edge/system maps, grid overview, dissociation)
+# Output: results/pls/figures/
+# Requires: pls
+pls-plots: pls
+    uv run python -m insideout.analysis.pls.visualize
+
+# ── Tests ────────────────────────────────────────────────────────────────────
+
+# Unit tests (PCA, Yeo system blocks, PLS on synthetic data)
+test:
+    uv run pytest

@@ -10,14 +10,19 @@ The core PLS routine is agnostic to what the blocks are; these functions decide:
 Everything is returned aligned to the same subject order, so the two blocks can
 be handed straight to run_behavioral_pls.
 """
+
 import logging
-from typing import Dict, List, Sequence, Tuple, Union, Optional
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 import pandas as pd
 import polars as pl
 
-from insideout.features.schaefer_yeo import upper_triangle_tensor, system_blocks_from_tensor
+from insideout.features.schaefer_yeo import (
+    system_blocks_from_tensor,
+    upper_triangle_tensor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +30,8 @@ logger = logging.getLogger(__name__)
 def build_brain_block(
     fmri_3d: np.ndarray,
     representation: str = "edges",
-    net_labels: Optional[Sequence[str]] = None,
-) -> Tuple[np.ndarray, Dict]:
+    net_labels: Sequence[str] | None = None,
+) -> tuple[np.ndarray, dict]:
     """
     Build the 2D brain block (rows = subjects, in the FC tensor's row order).
 
@@ -56,8 +61,8 @@ def build_brain_block(
 
 
 def build_behavior_block(
-    survey_dict: Dict[str, Union[np.ndarray, pd.DataFrame, "pl.DataFrame"]],
-    block_names: List[str],
+    survey_dict: dict[str, Union[np.ndarray, pd.DataFrame, "pl.DataFrame"]],
+    block_names: list[str],
     subject_col: str,
     matched_subjects: np.ndarray,
 ) -> pd.DataFrame:
@@ -73,7 +78,9 @@ def build_behavior_block(
     frames = []
     for name in block_names:
         if name not in survey_dict:
-            raise KeyError(f"Survey block {name!r} not found. Available: {list(survey_dict)}")
+            raise KeyError(
+                f"Survey block {name!r} not found. Available: {list(survey_dict)}"
+            )
         block = survey_dict[name]
         if hasattr(block, "to_pandas"):
             block = block.to_pandas()

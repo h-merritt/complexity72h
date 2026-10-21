@@ -225,6 +225,7 @@ data/*
 .env
 
 # Experiment results (large binary outputs)
+results/
 results/**/*.parquet
 results/**/*.csv
 results/**/*.json

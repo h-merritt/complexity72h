@@ -53,7 +53,7 @@ def configure_plot_style(path: str | Path) -> None:
     for key, value in params.items():
         try:
             plt.rcParams[key] = value
-        except Exception:
+        except (KeyError, ValueError, TypeError):
             logger.warning(
                 f"Failed to set rcParam '{key}'; skipping."
             )  # skip unknown or invalid params gracefully

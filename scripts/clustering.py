@@ -1,3 +1,20 @@
+"""K-means clustering of the survey variables.
+
+For every subset in ``clustering.subsets`` (blocks of the components config)
+and every k in ``2..clustering.max_k``: z-scores the subset variables
+(``StandardScaler``), fits k-means (``n_init`` and ``seed`` from the config),
+and records inertia, silhouette, Calinski-Harabasz and Davies-Bouldin scores.
+Then draws, per subset and k, the cluster heatmaps, bar/lollipop plots,
+distributions and PCA scatter for the subset's own variables and for the
+mental-health variables (which were not used for clustering), plus the
+clustering-quality curves across k.
+
+Output: ``results/plots/clustering/k{k}/{subset}/{specific,mh_only}/`` and
+``results/plots/clustering/fitness/{subset}/``; the cluster membership of every
+subset and k (JSON ``{cluster: [subject ids]}`` in the ``Membership_<subset>_k<k>``
+columns) in ``results/clustering/survey_clustered_all_k.parquet``.
+"""
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -12,23 +29,22 @@ from omegaconf import DictConfig
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import (
-    silhouette_score,
     calinski_harabasz_score,
     davies_bouldin_score,
+    silhouette_score,
 )
 from sklearn.preprocessing import StandardScaler
-
 from tqdm.auto import tqdm
 
 from insideout.data.loaders import load_survey_data
 from insideout.viz import (
     configure_plot_style,
-    plot_clustering_metrics,
-    plot_cluster_heatmap_avg_std,
     plot_cluster_distributions,
-    plot_cluster_pca_scatter,
+    plot_cluster_heatmap_avg_std,
     plot_cluster_means_bars,
     plot_cluster_means_lollipop,
+    plot_cluster_pca_scatter,
+    plot_clustering_metrics,
 )
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -78,7 +94,7 @@ def main(cfg: DictConfig) -> None:
         cfg.clustering.subsets.items(), desc="Subset", unit="subset"
     ):
         blocks = list(subset_cfg.blocks)
-        cols, metric_names = _resolve_block_columns(cfg.components, blocks)
+        _, metric_names = _resolve_block_columns(cfg.components, blocks)
 
         dfs = []
         for block_name in blocks:

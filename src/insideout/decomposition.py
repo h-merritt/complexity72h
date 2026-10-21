@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import polars as pl
 from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
@@ -23,9 +24,14 @@ class PCAResult:
     Attributes
     ----------
     loadings : pl.DataFrame
-        Matrix of shape ``(n_features, n_components)`` giving the contribution
-        of each original variable to each principal component, with a
-        ``"variable"`` column naming the original features.
+        Matrix of shape ``(n_features, n_components)`` with a ``"variable"``
+        column naming the original features.  The entries are the **unit-norm
+        eigenvectors** of the covariance matrix (``components.T``), i.e.
+        weights of the variables in each PC, not correlations.  Their
+        magnitudes are not comparable across PCs; to obtain the correlation
+        between a standardised variable and a PC multiply a column by
+        ``sqrt(eigenvalue)`` (``sqrt(n_features * explained_variance_ratio)``
+        for standardised data).
     scores : pl.DataFrame
         Projection of the input data onto the principal components; shape
         ``(n_samples, n_components)``.
@@ -33,7 +39,7 @@ class PCAResult:
         Fraction of total variance explained by each principal component.
     components : pl.DataFrame
         Principal component directions (the right singular vectors); shape
-        ``(n_components, n_features)``.
+        ``(n_components, n_features)``.  Equal to ``loadings`` transposed.
     """
 
     loadings: pl.DataFrame
@@ -65,8 +71,8 @@ def run_pca(df: pl.DataFrame, is_z_score: bool = True) -> PCAResult:
     >>> import polars as pl
     >>> df = pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
     >>> res = run_pca(df)
-    >>> res.explained_variance_ratio
-    [0.99..., 0.00...]
+    >>> [round(v, 6) for v in res.explained_variance_ratio]
+    [1.0, 0.0]
     """
     X = df.to_numpy()
     X = SimpleImputer(strategy="mean").fit_transform(
@@ -78,19 +84,23 @@ def run_pca(df: pl.DataFrame, is_z_score: bool = True) -> PCAResult:
         X = StandardScaler().fit_transform(X)  # standardise to zero-mean unit-variance
 
     pca = PCA(n_components=None).fit(X)
+    # sklearn returns components_ in Fortran order; polars builds a DataFrame
+    # from a 2-D array according to its memory layout, so force C order to keep
+    # the logical (n_components, n_features) orientation.
+    components = np.ascontiguousarray(pca.components_)
     pc_cols = [f"PC{i + 1}" for i in range(pca.n_components_)]
 
     return PCAResult(
         loadings=(
             pl.DataFrame(
-                pca.components_.T, schema=pc_cols
-            ).with_columns(  # components_ are rows; transpose to get variable × PC
+                np.ascontiguousarray(components.T), schema=pc_cols
+            ).with_columns(  # components are rows; transpose to get variable × PC
                 pl.Series("variable", df.columns)
             )
         ),
         scores=pl.DataFrame(dict(zip(pc_cols, pca.transform(X).T))),
         explained_variance_ratio=pca.explained_variance_ratio_.tolist(),
-        components=pl.DataFrame(pca.components_, schema=df.columns),
+        components=pl.DataFrame(components, schema=df.columns),
     )
 
 

@@ -33,11 +33,9 @@ ORIENTATION CONVENTION:
 The SVD is symmetric, so swapping X and Y will not error -- it will silently
 swap the meaning of U and V. Be deliberate.
 
-For production, we may prefer pyls.behavioral_pls (rmarkello/pyls; netneurolab/
-pypyls), which implements this same algorithm with extra tooling.
-But I've checked, and we actually get the same results as the pyls.behavioral_pls algorithm, 
-but pyls.behavioral_pls runs ~100 times slower compared to this code.
-It is probably because it does more than we need.
+Reference implementation: pyls.behavioral_pls (rmarkello/pyls; netneurolab/pypyls)
+implements the same algorithm with extra tooling. It gives the same results as this
+module but runs ~100x slower, as it computes more than is needed here.
 
 -----------------------------------------------------------------------------
 OPTIONAL EXTENSIONS (added on top of the original routine; all opt-in, so the
@@ -66,14 +64,15 @@ default call is numerically identical to before):
 # src/analysis/pls/associator.py
 
 import logging
-from typing import Dict, Any, Optional, Sequence, Tuple, List
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 from scipy.linalg import svd
 
-try:                                       # randomized SVD is optional
+try:  # randomized SVD is optional
     from sklearn.utils.extmath import randomized_svd
-except ImportError:                        # pragma: no cover
+except ImportError:  # pragma: no cover
     randomized_svd = None
 
 logger = logging.getLogger(__name__)
@@ -106,7 +105,7 @@ def cross_cov(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
 def _decompose(
     R: np.ndarray,
     method: str = "full",
-    n_components: Optional[int] = None,
+    n_components: int | None = None,
     seed: int = 0,
 ):
     """
@@ -168,6 +167,7 @@ def procrustes_rotation(ref: np.ndarray, resampled: np.ndarray) -> np.ndarray:
 
 
 def _corr(a: np.ndarray, b: np.ndarray) -> float:
+    """Pearson correlation of two 1-D vectors (0.0 if either is constant)."""
     a = a - a.mean()
     b = b - b.mean()
     d = np.sqrt((a @ a) * (b @ b))
@@ -179,7 +179,7 @@ def _columnwise_corr(Y_true: np.ndarray, Y_pred: np.ndarray) -> np.ndarray:
     yt = Y_true - Y_true.mean(0)
     yp = Y_pred - Y_pred.mean(0)
     num = (yt * yp).sum(0)
-    den = np.sqrt((yt ** 2).sum(0) * (yp ** 2).sum(0))
+    den = np.sqrt((yt**2).sum(0) * (yp**2).sum(0))
     with np.errstate(invalid="ignore", divide="ignore"):
         r = np.where(den > 0, num / den, 0.0)
     return np.clip(r, -1.0, 1.0)
@@ -214,11 +214,11 @@ def _behav_loadings(Xz: np.ndarray, Yz: np.ndarray, Umat: np.ndarray) -> np.ndar
     loadings are not orthonormalized, so they vary across resamples and yield
     meaningful bootstrap ratios / CIs (this is what pyls bootstraps for behavior).
     """
-    scores = Xz @ Umat                                  # (n, L)
+    scores = Xz @ Umat  # (n, L)
     sc = scores - scores.mean(0)
     yc = Yz - Yz.mean(0)
-    num = yc.T @ sc                                     # (T, L)
-    den = np.sqrt((yc ** 2).sum(0)[:, None] * (sc ** 2).sum(0)[None, :])
+    num = yc.T @ sc  # (T, L)
+    den = np.sqrt((yc**2).sum(0)[:, None] * (sc**2).sum(0)[None, :])
     with np.errstate(invalid="ignore", divide="ignore"):
         return np.where(den > 0, num / den, 0.0)
 
@@ -226,7 +226,7 @@ def _behav_loadings(Xz: np.ndarray, Yz: np.ndarray, Umat: np.ndarray) -> np.ndar
 # --------------------------------------------------------------------------- #
 # Group handling
 # --------------------------------------------------------------------------- #
-def _build_group_masks(groups, n: int) -> Tuple[List[np.ndarray], np.ndarray]:
+def _build_group_masks(groups, n: int) -> tuple[list[np.ndarray], np.ndarray]:
     """
     Resolve the `groups` argument into boolean per-group masks + ordered labels.
 
@@ -264,7 +264,7 @@ def _build_group_masks(groups, n: int) -> Tuple[List[np.ndarray], np.ndarray]:
             f"{g.sum() if np.issubdtype(g.dtype, np.number) else 'NA'}."
         )
 
-    uniq = np.unique(labels_per_subject)            # sorted -> deterministic
+    uniq = np.unique(labels_per_subject)  # sorted -> deterministic
     masks = [labels_per_subject == u for u in uniq]
     for u, m in zip(uniq, masks):
         if m.sum() < 2:
@@ -272,7 +272,9 @@ def _build_group_masks(groups, n: int) -> Tuple[List[np.ndarray], np.ndarray]:
     return masks, uniq
 
 
-def _stacked_crosscov(X: np.ndarray, Y: np.ndarray, masks: List[np.ndarray]) -> np.ndarray:
+def _stacked_crosscov(
+    X: np.ndarray, Y: np.ndarray, masks: list[np.ndarray]
+) -> np.ndarray:
     """
     Horizontally stack per-group brain-behavior cross-correlations.
 
@@ -284,14 +286,27 @@ def _stacked_crosscov(X: np.ndarray, Y: np.ndarray, masks: List[np.ndarray]) -> 
     The brain salience U from SVD(R) is SHARED across groups; the behavior
     salience V is (G*T, L): rows [g*T : (g+1)*T] belong to group g.
     """
-    blocks = [cross_cov(zscore(X[m]), zscore(Y[m])) for m in masks]   # each (B, T)
-    return np.hstack(blocks)                                          # (B, G*T)
+    blocks = [cross_cov(zscore(X[m]), zscore(Y[m])) for m in masks]  # each (B, T)
+    return np.hstack(blocks)  # (B, G*T)
 
 
 def _boot_stacked_crosscov(X, Y, masks, rng):
     """Bootstrap resample WITHIN each group (preserves group sizes), then stack.
     Also returns the concatenated resampled row indices so behavior loadings can
-    be recomputed on the resample."""
+    be recomputed on the resample.
+
+    Parameters
+    ----------
+    X : (n, B) brain block.
+    Y : (n, T) behavior block.
+    masks : list of (n,) bool arrays, one per group (see _build_group_masks).
+    rng : numpy.random.Generator used for the resampling.
+
+    Returns
+    -------
+    R : (B, G*T) stacked cross-correlation of the resampled data.
+    idx : (n,) resampled row indices, group by group.
+    """
     blocks, idxs = [], []
     for m in masks:
         idx = np.where(m)[0]
@@ -310,6 +325,14 @@ def _svd_half(Xh, Yh, V_ref, masks_h=None, svd_method="full", seed=0):
     Returns (U_aligned, V_aligned, behav_loadings) where behav_loadings is the
     half's behavior-vs-brain-score correlation matrix -- used for the v-side
     reliability, because the aligned V itself is degenerate (see _behav_loadings).
+
+    Parameters
+    ----------
+    Xh, Yh : brain (n_h, B) and behavior (n_h, T) rows of this half.
+    V_ref : (G*T, L) behavior saliences of the full-sample fit (alignment target;
+        its column count fixes the number of LVs kept).
+    masks_h : per-group bool masks within the half, or None for a single group.
+    svd_method, seed : forwarded to _decompose.
     """
     Xz, Yz = zscore(Xh), zscore(Yh)
     if masks_h is None or len(masks_h) == 1:
@@ -318,7 +341,7 @@ def _svd_half(Xh, Yh, V_ref, masks_h=None, svd_method="full", seed=0):
         R = _stacked_crosscov(Xh, Yh, masks_h)
     U, _, Vt = _decompose(R, method=svd_method, n_components=V_ref.shape[1], seed=seed)
     V = Vt.T
-    Q = procrustes_rotation(V_ref, V)          # align this half to the full-sample axes
+    Q = procrustes_rotation(V_ref, V)  # align this half to the full-sample axes
     Ua = U @ Q
     load = _behav_loadings(Xz, Yz, Ua)
     return Ua, V @ Q, load
@@ -345,24 +368,46 @@ def _split_half_reliability(X, Y, V_ref, nsplit, rng, masks, svd_method="full", 
     With multiple groups the split is stratified WITHIN each group, so both
     halves keep the group structure; otherwise this is the original single-group
     routine (the u-side is unchanged from before).
+
+    Parameters
+    ----------
+    X : (n, B) brain block.  Y : (n, T) behavior block.
+    V_ref : (G*T, L) full-sample behavior saliences (alignment reference).
+    nsplit : number of random split-halves (the smallest attainable p is
+        1 / (nsplit + 1)).
+    rng : numpy.random.Generator for the splits and the null shuffles.
+    masks : per-group bool masks (see _build_group_masks).
+    svd_method, seed : forwarded to _decompose.
+
+    Returns
+    -------
+    u_corr, v_corr : (L,) mean |corr| across splits for brain saliences and
+        behavior loadings.
+    u_p, v_p : (L,) paired permutation p-values, ``(#null >= obs + 1) / (nsplit + 1)``.
     """
     n = X.shape[0]
     L = V_ref.shape[1]
     n_groups = len(masks)
-    obs_u = np.zeros((nsplit, L)); obs_v = np.zeros((nsplit, L))
-    nul_u = np.zeros((nsplit, L)); nul_v = np.zeros((nsplit, L))
+    obs_u = np.zeros((nsplit, L))
+    obs_v = np.zeros((nsplit, L))
+    nul_u = np.zeros((nsplit, L))
+    nul_v = np.zeros((nsplit, L))
 
     if n_groups == 1:
         # ---- single-group path: u-side identical to before; v-side now loadings ----
         half = n // 2
         for s in range(nsplit):
             perm = rng.permutation(n)
-            iA, iB = perm[:half], perm[half:2 * half]
+            iA, iB = perm[:half], perm[half : 2 * half]
 
             uA, _, lA = _svd_half(X[iA], Y[iA], V_ref, None, svd_method, seed)
             uB, _, lB = _svd_half(X[iB], Y[iB], V_ref, None, svd_method, seed)
-            nuA, _, nlA = _svd_half(X[iA], Y[iA][rng.permutation(half)], V_ref, None, svd_method, seed)
-            nuB, _, nlB = _svd_half(X[iB], Y[iB][rng.permutation(half)], V_ref, None, svd_method, seed)
+            nuA, _, nlA = _svd_half(
+                X[iA], Y[iA][rng.permutation(half)], V_ref, None, svd_method, seed
+            )
+            nuB, _, nlB = _svd_half(
+                X[iB], Y[iB][rng.permutation(half)], V_ref, None, svd_method, seed
+            )
 
             for l in range(L):
                 obs_u[s, l] = abs(_corr(uA[:, l], uB[:, l]))
@@ -377,23 +422,39 @@ def _split_half_reliability(X, Y, V_ref, nsplit, rng, masks, svd_method="full", 
             for gi, gidx in enumerate(group_idx):
                 perm = rng.permutation(gidx)
                 h = len(gidx) // 2
-                iA.append(perm[:h]); iB.append(perm[h:2 * h])
-                gA.append(np.full(h, gi)); gB.append(np.full(h, gi))
-            iA = np.concatenate(iA); iB = np.concatenate(iB)
-            gA = np.concatenate(gA); gB = np.concatenate(gB)
+                iA.append(perm[:h])
+                iB.append(perm[h : 2 * h])
+                gA.append(np.full(h, gi))
+                gB.append(np.full(h, gi))
+            iA = np.concatenate(iA)
+            iB = np.concatenate(iB)
+            gA = np.concatenate(gA)
+            gB = np.concatenate(gB)
             masks_A = [gA == gi for gi in range(n_groups)]
             masks_B = [gB == gi for gi in range(n_groups)]
 
             # null: permute Y rows within each half, respecting group blocks
-            permA = np.concatenate([np.where(masks_A[gi])[0][rng.permutation(masks_A[gi].sum())]
-                                    for gi in range(n_groups)])
-            permB = np.concatenate([np.where(masks_B[gi])[0][rng.permutation(masks_B[gi].sum())]
-                                    for gi in range(n_groups)])
+            permA = np.concatenate(
+                [
+                    np.where(masks_A[gi])[0][rng.permutation(masks_A[gi].sum())]
+                    for gi in range(n_groups)
+                ]
+            )
+            permB = np.concatenate(
+                [
+                    np.where(masks_B[gi])[0][rng.permutation(masks_B[gi].sum())]
+                    for gi in range(n_groups)
+                ]
+            )
 
             uA, _, lA = _svd_half(X[iA], Y[iA], V_ref, masks_A, svd_method, seed)
             uB, _, lB = _svd_half(X[iB], Y[iB], V_ref, masks_B, svd_method, seed)
-            nuA, _, nlA = _svd_half(X[iA], Y[iA][permA], V_ref, masks_A, svd_method, seed)
-            nuB, _, nlB = _svd_half(X[iB], Y[iB][permB], V_ref, masks_B, svd_method, seed)
+            nuA, _, nlA = _svd_half(
+                X[iA], Y[iA][permA], V_ref, masks_A, svd_method, seed
+            )
+            nuB, _, nlB = _svd_half(
+                X[iB], Y[iB][permB], V_ref, masks_B, svd_method, seed
+            )
 
             for l in range(L):
                 obs_u[s, l] = abs(_corr(uA[:, l], uB[:, l]))
@@ -423,9 +484,27 @@ def _crossvalidate(X, Y, masks, V_full, test_size, n_test_split, svd_method, see
     module's (brain x behavior) orientation. Runs on its OWN random stream so the
     permutation/bootstrap results upstream are untouched.
 
-    Returns (r_scores, r2_scores), each (T, n_test_split) where T = #behavior cols.
+    NOTE: the prediction is not calibrated -- the brain scores are not rescaled
+    to the behavior scale (no singular value / regression slope) -- so it is
+    over-dispersed and R^2 is typically strongly negative even when r > 0. Use
+    the Pearson r scores for interpretation.
+
+    Parameters
+    ----------
+    X : (n, B) brain block.  Y : (n, T) behavior block.
+    masks : per-group bool masks (see _build_group_masks).
+    V_full : (G*T, L) full-sample behavior saliences; only its number of
+        columns (the number of LVs kept) is used.
+    test_size : fraction of each group held out per split.
+    n_test_split : number of random train/test splits.
+    svd_method : "full" or "randomized" (see _decompose).
+    seed : seed of the CV random stream.
+
+    Returns
+    -------
+    r_scores, r2_scores : each (T, n_test_split), T = #behavior columns.
     """
-    n, B = X.shape
+    n = X.shape[0]
     T = Y.shape[1]
     n_groups = len(masks)
     rng = np.random.default_rng(seed)
@@ -438,9 +517,9 @@ def _crossvalidate(X, Y, masks, V_full, test_size, n_test_split, svd_method, see
 
     for s in range(n_test_split):
         train = np.zeros(n, dtype=bool)
-        for gidx in group_idx:                       # stratified split within groups
-            k = int(round(len(gidx) * (1.0 - test_size)))
-            k = max(2, min(k, len(gidx) - 1))         # keep both train & test non-trivial
+        for gidx in group_idx:  # stratified split within groups
+            k = round(len(gidx) * (1.0 - test_size))
+            k = max(2, min(k, len(gidx) - 1))  # keep both train & test non-trivial
             sel = rng.permutation(gidx)[:k]
             train[sel] = True
         test = ~train
@@ -455,7 +534,7 @@ def _crossvalidate(X, Y, masks, V_full, test_size, n_test_split, svd_method, see
             Rtr = np.hstack([cross_cov(zscore(X[m]), zscore(Y[m])) for m in masks_tr])
 
         U, _, Vt = _decompose(Rtr, method=svd_method, n_components=L_ref, seed=seed)
-        V = Vt.T                                       # (G*T, L)
+        V = Vt.T  # (G*T, L)
 
         Y_pred = np.zeros((test.sum(), T))
         test_pos = np.where(test)[0]
@@ -466,7 +545,7 @@ def _crossvalidate(X, Y, masks, V_full, test_size, n_test_split, svd_method, see
             te_g = masks_te[gi]
             if tr_g.sum() < 2 or te_g.sum() == 0:
                 continue
-            Vg = V[gi * T:(gi + 1) * T, :] if n_groups > 1 else V
+            Vg = V[gi * T : (gi + 1) * T, :] if n_groups > 1 else V
             X_resc = _zmap(X[te_g], X[tr_g])
             pred_g = X_resc @ U @ Vg.T + Y[tr_g].mean(0, keepdims=True)
             for row, idx in zip(pred_g, np.where(te_g)[0]):
@@ -483,6 +562,7 @@ def _crossvalidate(X, Y, masks, V_full, test_size, n_test_split, svd_method, see
 # Main routine
 # --------------------------------------------------------------------------- #
 
+
 def run_behavioral_pls(
     X_brain: np.ndarray,
     Y_behav: np.ndarray,
@@ -494,11 +574,11 @@ def run_behavioral_pls(
     seed: int = 0,
     # ---- optional extensions (defaults reproduce the original behavior) ----
     svd_method: str = "full",
-    groups: Optional[Sequence] = None,
+    groups: Sequence | None = None,
     run_crossval: bool = False,
     test_size: float = 0.25,
     n_test_split: int = 100,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Behavioral PLS-correlation on pre-aligned 2D blocks (same subjects, same order).
 
@@ -556,22 +636,22 @@ def run_behavioral_pls(
     U, S, Vt = _decompose(R, method=svd_method, seed=seed)
     V = Vt.T
     L = len(S)
-    varexp = S ** 2 / np.sum(S ** 2)
+    varexp = S**2 / np.sum(S**2)
 
     # Participant scores
-    brain_scores = X @ U                       # shared brain axis projection
+    brain_scores = X @ U  # shared brain axis projection
     if single_group:
         behav_scores = Y @ V
     else:
         behav_scores = np.empty((n, L))
         for gi, m in enumerate(masks):
-            Vg = V[gi * T:(gi + 1) * T, :]
+            Vg = V[gi * T : (gi + 1) * T, :]
             behav_scores[m] = zscore(Y[m]) @ Vg
 
     # Behavior LOADINGS (point estimate): corr of each behavior col with the
     # brain latent score. This is the interpretable, non-degenerate behavior
     # quantity (see _behav_loadings). Always available, even without bootstrap.
-    behav_loadings = _behav_loadings(X, Y, U)          # (T, L)
+    behav_loadings = _behav_loadings(X, Y, U)  # (T, L)
 
     # Flag the V degeneracy: when L == n_behav the right singular vectors are
     # square-orthogonal, so V_bsr / split-half on V are NOT meaningful. Use the
@@ -581,7 +661,9 @@ def run_behavioral_pls(
         logger.warning(
             "Behavior salience matrix is square-orthogonal (L == n_behav = %d): "
             "V_bsr and the V-side split-half are degenerate (|BSR|->inf, corr->1). "
-            "Use behav_loading_bsr / behav_loading_ci for behavior reliability.", L)
+            "Use behav_loading_bsr / behav_loading_ci for behavior reliability.",
+            L,
+        )
 
     rng = np.random.default_rng(seed)
 
@@ -603,7 +685,7 @@ def run_behavioral_pls(
         # 3. Bootstrap (resample subjects, re-standardize BOTH blocks, Procrustes-align)
         bootU = np.zeros((nboot, X.shape[1], L))
         bootV = np.zeros((nboot, V.shape[0], L))
-        bootLoad = np.zeros((nboot, T, L))               # behavior loadings -> reliable BSR/CI
+        bootLoad = np.zeros((nboot, T, L))  # behavior loadings -> reliable BSR/CI
         for b in range(nboot):
             if single_group:
                 idx = rng.integers(0, n, n)
@@ -612,23 +694,25 @@ def run_behavioral_pls(
                 Rb, idx = _boot_stacked_crosscov(X, Y, masks, rng)
             Ub, _, Vtb = _decompose(Rb, method=svd_method, n_components=L, seed=seed)
             Vb = Vtb.T
-            Q = procrustes_rotation(V, Vb)          # one Q, applied to both -> keeps pairing
+            Q = procrustes_rotation(V, Vb)  # one Q, applied to both -> keeps pairing
             UbQ = Ub @ Q
             bootU[b] = UbQ
             bootV[b] = Vb @ Q
             bootLoad[b] = _behav_loadings(zscore(X[idx]), zscore(Y[idx]), UbQ)
         U_bsr = U / (bootU.std(0, ddof=1) + 1e-12)
-        V_bsr = V / (bootV.std(0, ddof=1) + 1e-12)      # NOTE: degenerate when L==n_behav
+        V_bsr = V / (bootV.std(0, ddof=1) + 1e-12)  # NOTE: degenerate when L==n_behav
         # Behavior reliability done RIGHT: ratio of loading to its bootstrap SE,
         # plus a percentile CI. |bsr|>2 (or CI excluding 0) flags a stable item.
         behav_loading_bsr = behav_loadings / (bootLoad.std(0, ddof=1) + 1e-12)
         behav_loading_ci = np.stack(
-            np.percentile(bootLoad, [2.5, 97.5], axis=0), axis=-1)   # (T, L, 2)
+            np.percentile(bootLoad, [2.5, 97.5], axis=0), axis=-1
+        )  # (T, L, 2)
 
         # 4. Split-half reliability
         if nsplit > 0:
             su, sv, su_p, sv_p = _split_half_reliability(
-                X, Y, V, nsplit, rng, masks, svd_method, seed)
+                X, Y, V, nsplit, rng, masks, svd_method, seed
+            )
         else:
             su = sv = su_p = sv_p = np.full(L, np.nan)
 
@@ -645,7 +729,8 @@ def run_behavioral_pls(
     # 5. Out-of-sample cross-validation (independent RNG -> does not perturb above)
     if run_crossval:
         cv_r, cv_r2 = _crossvalidate(
-            X, Y, masks, V, test_size, n_test_split, svd_method, seed + 1)
+            X, Y, masks, V, test_size, n_test_split, svd_method, seed + 1
+        )
         cv_r_mean = np.nanmean(cv_r, axis=1)
         cv_r2_mean = np.nanmean(cv_r2, axis=1)
     else:
@@ -656,30 +741,44 @@ def run_behavioral_pls(
 
     logger.info(
         "PLS done. %d LVs; LV1 covexp=%.1f%%, p=%.4f, split-half u/v=%.2f/%.2f%s",
-        L, 100 * varexp[0], pvals[0], su[0], sv[0],
-        ("" if not run_crossval else f", CV r(LV-indep) mean=%.2f" % np.nanmean(cv_r_mean)),
+        L,
+        100 * varexp[0],
+        pvals[0],
+        su[0],
+        sv[0],
+        (
+            ""
+            if not run_crossval
+            else f", CV r(LV-indep) mean={np.nanmean(cv_r_mean):.2f}"
+        ),
     )
 
     return {
-        "U": U, "S": S, "V": V,
+        "U": U,
+        "S": S,
+        "V": V,
         "varexp": varexp,
         "brain_scores": brain_scores,
         "behav_scores": behav_scores,
         "pvals": pvals,
         "perm_S": perm_S,
-        "U_bsr": U_bsr, "V_bsr": V_bsr,
-        "split_ucorr": su, "split_vcorr": sv,
-        "split_u_p": su_p, "split_v_p": sv_p,
-        "L": L, "n": n,
+        "U_bsr": U_bsr,
+        "V_bsr": V_bsr,
+        "split_ucorr": su,
+        "split_vcorr": sv,
+        "split_u_p": su_p,
+        "split_v_p": sv_p,
+        "L": L,
+        "n": n,
         # ---- behavior reliability done correctly (use these, not V_bsr) ----
-        "behav_loadings": behav_loadings,           # (T, L) corr(behavior, brain score)
-        "behav_loading_bsr": behav_loading_bsr,     # (T, L) loading / bootstrap SE
-        "behav_loading_ci": behav_loading_ci,       # (T, L, 2) 95% percentile CI
+        "behav_loadings": behav_loadings,  # (T, L) corr(behavior, brain score)
+        "behav_loading_bsr": behav_loading_bsr,  # (T, L) loading / bootstrap SE
+        "behav_loading_ci": behav_loading_ci,  # (T, L, 2) 95% percentile CI
         "behav_salience_degenerate": behav_salience_degenerate,
         # ---- extension outputs ----
         "n_groups": n_groups,
         "group_labels": np.asarray(group_labels),
-        "behav_per_group": T,                  # behavior cols per group (V rows = n_groups*T)
+        "behav_per_group": T,  # behavior cols per group (V rows = n_groups*T)
         "svd_method": svd_method,
         "cv_pearson_r": cv_r,
         "cv_r_squared": cv_r2,
@@ -697,7 +796,7 @@ def compare_brain_saliences(
     lv: int = 0,
     nperm: int = 10000,
     seed: int = 0,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Similarity of two brain salience maps for a given LV (e.g. inner vs outer).
 
