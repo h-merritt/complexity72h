@@ -14,17 +14,7 @@
 [Haily Merritt](https://orcid.org/0000-0002-7422-3421)<sup>11</sup>,
 [Andreia Sofia Teixeira](https://orcid.org/0000-0002-2758-1891)<sup>11</sup>
 
-<sup>1</sup>Aix-Marseille University
-<sup>2</sup>Université de Toulon
-<sup>3</sup>Universitat de Barcelona
-<sup>4</sup>Northeastern University Boston
-<sup>5</sup>Universiteit van Amsterdam
-<sup>6</sup>Institut d’Investigacions Biomèdiques August Pi i Sunyer
-<sup>7</sup>Universitat de Barcelona
-<sup>8</sup>Universitat Politècnica de Catalunya
-<sup>9</sup>Sapienza University of Rome
-<sup>10</sup>Binghamton University
-<sup>11</sup>Northeastern University London
+<sup>1</sup>Aix-Marseille University · <sup>2</sup>Université de Toulon · <sup>3</sup>Universitat de Barcelona · <sup>4</sup>Northeastern University Boston · <sup>5</sup>Universiteit van Amsterdam · <sup>6</sup>Institut d’Investigacions Biomèdiques August Pi i Sunyer · <sup>7</sup>Universitat de Barcelona · <sup>8</sup>Universitat Politècnica de Catalunya · <sup>9</sup>Sapienza University of Rome · <sup>10</sup>Binghamton University · <sup>11</sup>Northeastern University London
 
 </div>
 
