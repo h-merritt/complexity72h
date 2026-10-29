@@ -1,0 +1,26 @@
+# Parameters of the analyses of the inner and outer social measures
+# (scripts/cronbach_alpha.py, pc_inner_outer_overlap.py, leave_one_out_pca.py,
+# measure_fc_associations.py).
+defaults:
+  - components: default
+  - io: default
+  - _self_
+
+hydra:
+  job:
+    chdir: false
+
+out_dir: results/measure_analyses
+plots_dir: results/plots/measure_analyses
+seed: 42
+n_perm: 10000      # permutations for the p-values
+n_pcs: 3           # PCs reported by the leave-one-out PCA
+n_pcs_loadings: 5  # PCs shown in the reverse-scored loadings figure
+
+# Measures scored so that higher = worse; flipped for the reverse-scored PCA
+reverse_scored:
+  - Neuroticism
+  - Loneliness
+  - Perceived Hostility
+  - Perceived Rejection
+  - Perceived Stress

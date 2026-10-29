@@ -79,3 +79,34 @@ pls-plots: pls
 # Unit tests (PCA, Yeo system blocks, PLS on synthetic data)
 test:
     uv run pytest
+
+# ── Inner/outer measure analyses ─────────────────────────────────────────────
+
+# Cronbach's alpha of the inner and outer measures (raw and reverse-scored)
+# Output: results/measure_analyses/cronbach_alpha.csv
+alpha:
+    uv run python scripts/cronbach_alpha.py
+
+# Overlap of each PC with the inner/outer grouping (ARI / AMI of the loading signs)
+# Output: results/measure_analyses/pc_inner_outer_overlap.csv
+pc-overlap:
+    uv run python scripts/pc_inner_outer_overlap.py
+
+# PCA with each measure left out in turn
+# Output: results/measure_analyses/leave_one_out_pca.csv, results/plots/measure_analyses/
+leave-one-out-pca:
+    uv run python scripts/leave_one_out_pca.py
+
+# PCA loadings after reverse scoring the negatively valenced measures
+# Output: results/measure_analyses/pca_loadings_reverse_scored.csv, results/plots/measure_analyses/
+pca-loadings-reversed:
+    uv run python scripts/pca_loadings_reverse_scored.py
+
+# Edge-wise association of each measure with FC; similarity of the associations
+# Output: results/measure_analyses/, results/plots/measure_analyses/
+# Requires: data/hcp100_fc.mat, data/hcp100_fc_ids.csv
+measure-fc:
+    uv run python scripts/measure_fc_associations.py
+
+# All inner/outer measure analyses
+measures: alpha pc-overlap leave-one-out-pca pca-loadings-reversed measure-fc

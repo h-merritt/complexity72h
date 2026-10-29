@@ -2,3 +2,5 @@ mh_data: data/hcp_social_mentahealth_data.csv
 plots: results/plots
 eda_plots: results/plots/eda
 correlation_dendrogram: false
+fc_data: data/hcp100_fc.mat
+fc_ids: data/hcp100_fc_ids.csv
